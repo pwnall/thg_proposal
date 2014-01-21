@@ -1,0 +1,31 @@
+\begin{abstract}
+
+We set out to build a system for performing trusted computation on mainstream
+desktop and server-class computers. Our system has three mutually distrusting
+parties: \textit{a data provider} has some private information, and allows
+\textit{a software provider} to perform some computation on the private data,
+using hardware resources provided by \textit{an infrastructure owner}. The
+computation result is communicated to either the data provider or the software
+provider, in encrypted form.
+
+We aim to build a system that can prevent malicious software from colluding
+with either malicious infrastructure, or with another piece of malicious
+software running on the same infrastructure, for the purpose of leaking private
+data that is not included in the computation result. Our trusted computing base
+(TCB) includes the contents of an Intel processor, and a
+\textit{software loader} that verifies and launches the untrusted software. We
+rely on a processor's ability to create a secure execution environment that is
+isolated from the system software, such as Software Guard Extensions (SGX)
+\cite{anati2013sgx} or Trusted Execution Technology (TXT)
+\cite{grawrock2009txt}. Our TCB does not include the operating system or any
+high-level software that runs on the infrastructure.
+
+The main application that we are targeting is enabling heavily regulated
+fields, such as the medical and financial industries, to use public clouds and
+software as a service (SaaS). While legal consequences make it unlikely that a
+public infrastructure or SaaS provider will deliberately act in a malicious
+manner, our threat model covers against skilled attackers who can exploit bugs
+in both the infrastructure and the software that performs computation over the
+private data.
+
+\end{abstract}
