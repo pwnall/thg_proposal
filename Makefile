@@ -1,4 +1,4 @@
-all:	pdf/costan12police.pdf
+all:	pdf/costan-thg-prop.pdf
 
 tmp/:
 	mkdir -p tmp/
@@ -6,9 +6,9 @@ tmp/:
 pdf/:
 	mkdir -p pdf/
 
-pdf/costan12police.pdf: $(wildcard src/*) $(wildcard src/contents/*) tmp/ pdf/
+pdf/costan-thg-prop.pdf: $(wildcard src/*) $(wildcard src/contents/*) tmp/ pdf/
 	rubber --into=tmp/ --pdf src/main.tex
-	mv tmp/main.pdf pdf/costan12police.pdf
+	mv tmp/main.pdf pdf/costan-thg-prop.pdf
 
 clean:
 	rm -rf tmp pdf/*
