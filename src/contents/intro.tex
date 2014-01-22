@@ -33,3 +33,36 @@ StarCraft, the game client code running on the players' computers "knows" the
 entire state, and is trusted to hide the information that the player should not
 have access to \cite{hardy2009cheating}. The other games metioned above
 \cite{youtube:lolcheating}, \cite{youtube:quake3cheating}
+
+
+\subsection{Threat Model}
+
+Our threat model assumes that the infrastructure is shared by multiple ongoing
+computations, potentially using software from different mutually distrusting
+providers. The operating system and high-level software used to manage the
+infrastructure may be malicious, and may cooperate with one or more malicious
+pieces of software running on the infrastructure, including the software that
+performs computations on the private data that must be protected.
+
+The threat model accurately represents a public cloud. Attackers can rent
+resources and run malicious software, as well as run experiments to reveal and
+exploit vulnerabilities in the infrastructure software. The programs that run
+over the private data can also have vulnerabilities, which can be exploited by
+attackers.
+
+In the multiplayer game case, the private data is the full game state, and the
+data owner is the same as the software supplier. The infrastructure is the
+players' computers. Given that players have an incentive to cheat, it is
+reasonable to assume that the infrastructure can behave maliciously. Our system
+assumes that the players can exploit any vulnerability available in the game
+software. Last, players that desire an unfair advantage can install software
+that is specifically designed for cheating, and this software may be running
+concurrently with the game software.
+
+Our threat model does not cover attacks that require intimiate knowledge of the
+processor's hardware internals. Most importantly, we do not protect against
+malicious OS-level software that can abuse a CPU's in-field microcode update
+mechanism to create a vulnerability in the processor's security features, or
+against attackers that have knowledge of existing vulnerabilities in the CPU.
+We also do not protect against attacks that analyze the computer's power
+consumption.
