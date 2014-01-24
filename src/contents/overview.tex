@@ -1,4 +1,52 @@
-\section{System Overview}
+\section{Design Overview}
 \label{sec:overview}
 
-We
+We plan to use the CPU's secure execution features to create an isolated
+environment that the untrusted program will run in. We are most likely to end
+up relying Intel's Software Guard Extensions (SGX) \cite{anati2013sgx}.
+Unfortunately, no processor with SGX has been released yet, so we must rely on
+our interpretation of Intel's SGX programming reference manual
+\cite{intel2013sgxmanual}.
+
+SGX introduces a new execution mode called \textit{enclave mode}. While in
+enclave mode, the CPU can fetch code and data from an area of physical memory
+that is isolated from software running outside enclave mode (including SMM) and
+from the hardware connected to the system bus. The information stored in the
+isolated memory is encrypted\footnote{Actually, the SGX manual carefully
+tiptoes around this issue by saying "On implementations in which EPC is part of
+system DRAM, the contents of the EPC are protected by an encryption engine."}
+as it leaves the CPU. Furthermore, transitions to enclave mode must use
+pre-specified entry points (like transitions from user mode to kernel mode),
+and transitions from enclave mode store the processor state associated with
+enclave code execution inside the isolated memory area.
+
+Based on the contents of Intel's manual, it seems that we can trust the SGX
+implementation to guard the integrity of any computation that runs in enclave
+mode against tampering attempts from other software on the platform. However,
+on the privacy end, the provisions of SGX are lacking. The memory encryption
+measures specified in the manual do not guard against other software learning
+the memory access patterns of the software running inside enclave mode, which
+can be used to gain knowledge about the private data that the computation is
+running on. For example, it has been shown that cache timing attacks can be
+used to recover encryption keys \cite{bonneau2006cache}
+\cite{brumley2005remote} \cite{kocher1996timing}.
+
+We avoid leaking memory access patterns by replacing all the instructions that
+perform memory accesses in the software operating on private data with calls
+to a memory manager that is part of our TCB. The memory manager implements an
+oblivious RAM protocol \cite{stefanov2012path} to hide the software's memory
+access patterns. We follow the approach of Google Native Client
+\cite{yee2009native} \cite{sehr2010adapting}, namely we require that memory
+accesses are replaced by calls to a function during the software's compilation
+phase, and our TCB contains a loader that statically verifies the software to
+ensure that it does not perform any direct memory access. This results in a
+small TCB, compared to rewriting the software's machine code on the fly, and
+we expect that a technique similar to RockSalt \cite{morrisett2012rocksalt} can
+be used to prove the correctness of our verifier.
+
+paragraph on attestation
+
+\subsection{SGX Limitations}
+
+\subsection{Hiding Memory Accesses}
+

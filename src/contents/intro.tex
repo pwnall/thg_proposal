@@ -31,8 +31,10 @@ network latencies, many games entrust a player's game client with a superset
 of the game state that the user should have access to. For example, in
 StarCraft, the game client code running on the players' computers "knows" the
 entire state, and is trusted to hide the information that the player should not
-have access to \cite{hardy2009cheating}. The other games metioned above
-\cite{youtube:lolcheating}, \cite{youtube:quake3cheating}
+have access to \cite{hardy2009cheating}. The other games metioned above also
+store information that the player shouldn't access in the game clients, leading
+to opportunities for cheating \cite{youtube2013lolcheating}
+\cite{youtube2008quake3cheating}.
 
 
 \subsection{Threat Model}
@@ -66,3 +68,13 @@ mechanism to create a vulnerability in the processor's security features, or
 against attackers that have knowledge of existing vulnerabilities in the CPU.
 We also do not protect against attacks that analyze the computer's power
 consumption.
+
+Last, the threat model does not include denial of service attacks. Our system
+requires the operating system that manages the infrastructure to enable certain
+CPU features. We do not trust the operating system, so our system checks for
+the features' presence and enablement. If the checks fail, the system refuses
+to decrypt private data and to perform any computation. This can lead to a
+denial of service attack. At the same time, an attack that compromises the
+operating system can cause a denial of service simply by disabling the network
+driver, and that cannot be worked around as long as the OS is untrusted.
+
