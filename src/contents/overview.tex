@@ -44,9 +44,31 @@ small TCB, compared to rewriting the software's machine code on the fly, and
 we expect that a technique similar to RockSalt \cite{morrisett2012rocksalt} can
 be used to prove the correctness of our verifier.
 
-paragraph on attestation
+SGX provides an attestation mechanism that assures a remote user that a piece
+of information was signed by a certain piece of software running inside a
+enclave. The signature includes a cryptographic hash of the software running
+inside the enclave. In our system, the signature only needs to cover the loader
+and memory manager, as the loader verifies the program that computes on
+private data, and ensures that the program meets the data owner's security
+policy. The data owner must only trust our TCB, and the software provider can
+iterate faster and rely on our verifier and memory manager to protect from
+bugs that would result in private data leaks.
 
 \subsection{SGX Limitations}
 
+This section summarizes the aspects of the SGX documentation that are relevant
+to our system. The interested but time-constrained reader is advised to read
+\cite{mckeen2013innovative}, \cite{anati2013sgx}, and Chapters 1 (Introduction
+to SGX), 3 (Enclave Operation), 4 (Enclave Exiting Events) and 6 (SGX
+Interactions with IA32 and Intel 64 Architecture) of \cite{intel2013sgxmanual}
+for a deeper understanding of SGX.
+
+
+Enclave mode can access the Enclave Page Cache (EPC), which is a
+subset of the Processor Reserved Memory (PRM) area.
+
 \subsection{Hiding Memory Accesses}
+
+
+\subsection{Software Loading and Attestation}
 
