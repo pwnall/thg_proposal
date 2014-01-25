@@ -54,7 +54,7 @@ policy. The data owner must only trust our TCB, and the software provider can
 iterate faster and rely on our verifier and memory manager to protect from
 bugs that would result in private data leaks.
 
-\subsection{SGX Limitations}
+\subsection{SGX Overview and Limitations}
 
 This section summarizes the aspects of the SGX documentation that are relevant
 to our system. The interested but time-constrained reader is advised to read
@@ -63,9 +63,92 @@ to SGX), 3 (Enclave Operation), 4 (Enclave Exiting Events) and 6 (SGX
 Interactions with IA32 and Intel 64 Architecture) of \cite{intel2013sgxmanual}
 for a deeper understanding of SGX.
 
+SGX isolates the code and data in an enclave by placing it in a protected area
+of physical memory called the Enclave Page Cache (EPC). EPC is a continuous
+region of the Processor Reserved Memory (PRM) area, which in turn is a
+continuous region of DRAM. Both the PRM and the EPC are set up by the BIOS
+during the computer's boot sequence. The memory controller inside the CPU
+blocks any DMA access to PRM, which protects the EPC area from hardware
+connected to the system bus. The CPU disallows EPC access to software not
+running in enclave mode.
 
-Enclave mode can access the Enclave Page Cache (EPC), which is a
-subset of the Processor Reserved Memory (PRM) area.
+SGX was designed to protect application-level code. Enclave execution always
+happens in protected mode, at ring 3 (in user-mode, not kernel-mode). Also, SGX
+supports applications whose memory footprint is larger than the EPC size. This
+is accomplished by having the operating system map 4kb pages inside each
+enclave's linear address space to EPC pages. The mapping is maintained in a
+similar manner to how virtual memory works \cite{jacob1998virtual}, except that
+EPC pages are paged out to RAM in an encrypted form, and SGX uses a data
+structure to provide integrity and freshness guarantees for EPC pages that are
+paged out and later paged in.
+
+Logical memory addresses used by software in enclave mode are handled in a
+similar way to ring 3 addresses. A limited form of segmentation is in effect,
+meaning that logical addresses equal linear addresses. The normal paging rules
+apply, meaning that linear addresses are translated into physical addresses
+by walking a 3-level or 4-level data structure. SGX integrates with Intel's
+Virtualization Technology \cite{uhlig2005intel} so, in non-root VMX mode with
+Extended Page Tables (EPT) enabled, the result of walking the paging data
+structures maintained by the OS is a guest-physical address, which is
+translated into a physical address by walking another 3-level or 4-level
+data structure maintained by the Virtual Machine Monitor (VMM).
+
+When creating or paging in an EPC page, the operating system must declare the
+linear address that will be used by enclave mode software to access the page.
+On every address translation that results in the physical address of an EPC
+page, the CPU ensures\footnote{A general protection (\#GP) fault occurs in case
+of a linear address mismatch} that the linear address involved in the
+translation matches the linear address associated with the EPC page. This
+ensures that neither the OS nor the VMM can tamper with the enclave software's
+view of memory.
+
+Software running in enclave mode can cause page faults, under the same
+conditions as any piece of software running at ring 3 would. Before the CPU
+executes the normal steps for handling the fault, it performs an asynchronous
+enclave exit (AEX), which saves the processor state in a designated area inside
+the EPC, replaces all registers with bogus values, and resets the bottom 12
+bits of register CR3, which contains the address of the page fault. SGX does
+its best to hide the state of the execution inside enclave mode, but must
+expose the page at which the fault occurred, so that the OS or the VMM know
+which page needs to be paged in. This allows a curious OS or VMM to obtain a
+page-level memory access trace for a program running inside an enclave, simply
+by making sure that only one page is paged in at any given time.
+
+There are many other channels that leak memory access information.
+
+\begin{itemize}
+
+\item Enclave mode sets the accessed and dirty bits appropriately on all levels
+      of the paging structures involved in address translation, exposing access
+      information to both the OS and the VMM.
+
+\item Interrupts that cause an asynchronous exit (AEX) from enclave mode flush
+      the processor's TLB, but leave the cache contents intact, so the OS or
+      VMM can probe the cache to see which lines were replaced by the enclave
+      software, which reveals information about the software's memory access
+      patterns.
+
+\item Returning into enclave mode from an AEX via the ERESUME instruction
+      flushes the TLB, so the OS and VMM can get information about the enclave
+      software's memory accesses even if the targeted memory is still cached,
+      by marking the appropriate page table and/or page directory entries
+      \textit{not present}.
+
+\item Hyper-threading is compatible with SGX, so a malicious OS or VMM can
+      schedule a thread on a logical processor on the same core as the logical
+      processor running the enclave program. The two threads would share
+      caches and execution units, so the second thread could use the
+      processor's timestamp counter \cite{petters1999making} to obtain private
+      information.
+
+\item The PRM can be set up by the BIOS as write-back (WB) or uncacheable (UC)
+      memory. If the PRM is set as uncacheable, an adversary with physical
+      access and the tools to tap the system bus can see the enclave program's
+      memory accesses, possibly at word granularity.
+
+\end{itemize}
+
+
 
 \subsection{Hiding Memory Accesses}
 
