@@ -149,8 +149,15 @@ There are many other channels that leak memory access information.
 \end{itemize}
 
 
-
 \subsection{Hiding Memory Accesses}
+
+Our system uses a scheme for hiding memory access patterns that relies on some
+details of the cache implementation on commodity CPU processors. To remain
+future-proof, the loader uses the CPUID instruction \cite{intel2013manual} to
+query the CPU's cache configuration and aborts when faced with a configuration
+that doesn't match our design. This section describes the aspects that we rely
+on.
+
 
 
 \subsection{Software Loading and Attestation}
