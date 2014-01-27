@@ -75,7 +75,7 @@ running in enclave mode.
 SGX was designed to protect application-level code. Enclave execution always
 happens in protected mode, at ring 3 (in user-mode, not kernel-mode). Also, SGX
 supports applications whose memory footprint is larger than the EPC size. This
-is accomplished by having the operating system map 4kb pages inside each
+is accomplished by having the operating system map 4KB pages inside each
 enclave's linear address space to EPC pages. The mapping is maintained in a
 similar manner to how virtual memory works \cite{jacob1998virtual}, except that
 EPC pages are paged out to RAM in an encrypted form, and SGX uses a data
@@ -151,14 +151,70 @@ There are many other channels that leak memory access information.
 
 \subsection{Hiding Memory Accesses}
 
-Our system uses a scheme for hiding memory access patterns that relies on some
-details of the cache implementation on commodity CPU processors. To remain
-future-proof, the loader uses the CPUID instruction \cite{intel2013manual} to
-query the CPU's cache configuration and aborts when faced with a configuration
-that doesn't match our design. This section describes the aspects that we rely
-on.
+Desktop-class multi-core commodity CPUs have three levels of cache memory. Each
+core has its own L1 and L2, and all cores share an L3 cache. All cache levels
+are located on the CPU die so, according to our threat model, they can be
+trusted. In particular, we can assume that software memory reads and writes for
+locations that are already cached (and therefore do not generate DRAM requests)
+cannot be directly observed by an attacker. This requires that the software's
+memory is confired to be cacheable with a write-back policy, and our system
+accounts for this requirement.
 
+Cache accesses can be indirectly observed by various timing attacks
+\cite{banescu2011cache}, by malicious software that time-shares a CPU or a core
+with the targeted software and takes advantage of a specific cache's layout
+and replacement algorithms. Our system prevents against these attacks, also by
+taking advantage of some details of the cache implementation on commodity CPU
+processors. This section describes the aspects that we rely on.
+\cite{smith1982cache}, \cite{patterson2013architecture} and
+\cite{hennessy2012architecture} all provide good backgrounds on low-level cache
+implementation concepts.
 
+To remain future-proof, the loader uses the CPUID instruction
+\cite{intel2013manual} to query the CPU's cache layout and aborts when faced
+with an implementation that doesn't match our design assumptions.
+
+The \textit{cache line} is the atomic unit of data transfer between the caches
+and the main memory. The cache line size is always a power of two. Assuming
+$n$-bit memory addresses and a cache line size of $2^{l}$ bytes, the lowest
+$l$ bits of a memory address are an offset into a cache line, and the highest
+$n - l$ bits determine the cache line that is used to store the data at the
+memory location. All recent processors have 64-byte cache lines.
+
+The L1 and L2 caches in recent processors are multi-way set-associative with
+direct set indexing. An $w$-way set-associative cache has its memory divided
+into \textit{sets}, where each set has $w$ lines. A memory location can be
+cached in any of the $w$ lines in a specific set that is determined by the
+highest $n - l$ bits of the location's memory address. Direct set indexing
+means that the $S$ sets in a cache are indexed from $0$ to $S - 1$, and a
+memory location is cached in the set with index
+$address_{n - 1 \ldots n - l} \bmod S$. In the common case where the number of
+sets in a cache is a power of two, so $S = 2^{s}$, the lowest $l$ bits in an
+address make up the cache line offset, the next $s$ bits are the set index.
+The highest $n - s - l$ bits in an address are not used when selecting where a
+memory location will be cached.
+
+According to the CPUID instruction results and the Intel programming manuals
+\cite{intel2013manual}, the L3 cache of recent processors does not use direct
+set indexing, and instead uses a "complex" indexing scheme. The manuals do not
+describe the scheme, so our system cannot rely on the L3 cache. Due to the lack
+of a specification, our system treats L3 cache as untrusted memory. This is
+rather unfortunate because, although the shared aspect of the L3 cache would
+introduce additional complexity in a design, its large size (30MB on high-end
+CPUs, compared to 256KB of per-core L2 cache) would make "taming" this last
+level of cache very attractive.
+
+When paging is enabled, translating the virtual memory addresses used by
+software into physical memory addresses requires as many as 4 memory accesses,
+for 64-bit software, or even 8 memory accesses in VMX non-root mode when
+extended page tables (EPT) are in use. The CPU caches address translations in a
+TLB (translation look-aside buffer). To make L1 caches as fast as possible, set
+lookup does not depend on TLB lookup, so the set index in an L1 cache can only
+use the address bits that are not impacted by address translation. Given a page
+size $P = 2^{p}$ bytes, this means that $l + s \le p$. In the x86 architecture
+$p = 12$, and all recent processors have 64-byte cache lines ($l = 6$) and
+64 sets ($s = 6$). The L2 cache in recent Intel processors uses ??? indexing
+(need reference and answer)
 
 \subsection{Software Loading and Attestation}
 
