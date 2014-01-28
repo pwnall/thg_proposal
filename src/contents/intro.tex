@@ -44,22 +44,34 @@ computations, potentially using software from different mutually distrusting
 providers. The operating system and high-level software used to manage the
 infrastructure may be malicious, and may cooperate with one or more malicious
 pieces of software running on the infrastructure, including the software that
-performs computations on the private data that must be protected.
+performs computations on the private data that must be protected. The
+infrastructure owner may also mount a physical attack by attaching a device to
+one of the computer's buses, such as the Front-Side Bus (FSB) used for DRAM
+accesses or the PCI Express bus. We consider physical attacks to be
+significantly more expensive to carry out than software attacks, and we treat
+them separately where it makes sense to do so.
 
 The threat model accurately represents a public cloud. Attackers can rent
 resources and run malicious software, as well as run experiments to reveal and
 exploit vulnerabilities in the infrastructure software. The programs that run
 over the private data can also have vulnerabilities, which can be exploited by
-attackers.
+attackers. An attacker can also motivate a datacenter maintainance employee to
+attach a physical device to a server, but this attack is significantly harder
+to mount than a purely software attack.
 
 In the multiplayer game case, the private data is the full game state, and the
 data owner is the same as the software supplier. The infrastructure is the
 players' computers. Given that players have an incentive to cheat, it is
 reasonable to assume that the infrastructure can behave maliciously. Our system
 assumes that the players can exploit any vulnerability available in the game
-software. Last, players that desire an unfair advantage can install software
-that is specifically designed for cheating, and this software may be running
-concurrently with the game software.
+software. Furthermore, players that desire an unfair advantage might install
+software that is specifically designed for cheating. This software may be
+running concurrently with the game software, and may include components that
+run with OS privileges (e.g., Windows drivers or Linux / Darwin kernel
+modules) or even SMM privileges (e.g., BIOS hacks). Last, players are willing
+to attach hardware devices (known as \textit{mods} or \textit{modchips}) to
+computers or game consoles to be able to cheat \cite{harris2007mod}, so
+hardware attacks are even more relevant in the multiplayer game scenario.
 
 Our threat model does not cover attacks that require intimiate knowledge of the
 processor's hardware internals. Most importantly, we do not protect against
@@ -77,4 +89,3 @@ to decrypt private data and to perform any computation. This can lead to a
 denial of service attack. At the same time, an attack that compromises the
 operating system can cause a denial of service simply by disabling the network
 driver, and that cannot be worked around as long as the OS is untrusted.
-
