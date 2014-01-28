@@ -55,6 +55,36 @@ iterate faster and rely on our verifier and memory manager to protect from
 bugs that would result in private data leaks.
 
 
+\subsection{Address Translation Overview}
+
+Recent commodity CPUs have many address translation modes, in order to run
+legacy software dating back to 1990 natively. This section summarizes the modes
+used in modern 64-bit operating systems and 64-bit cloud environments.
+
+64-bit desktop operating systems use the addressing mode called IA-32e in
+Intel programming manual \cite{intel2013manual}, which translates 48-bit
+\textit{virtual addresses} into \textit{physical addresses} of at most 52 bits
+\footnote{The size of a physical address is CPU-dependent, and is 40 bits for
+recent desktop CPUs and 44 bits for recent high-end server CPUs.}. The bottom
+12 bits of a virtual address are not changed by the translation. The top 36
+bits are grouped into four 9-bit indexes used to navigate a data structure that
+closely resembles a perfectly balanced 512-ary search tree where the nodes do
+not store keys. Each node is an array of 512 8-byte entries that contain the
+physical addresses of the next-level children as well as some flags. The
+address of the root node is stored in the CR3 register. The arrays in the
+last-level nodes contain the physical addresses that are the result of the page
+translation.
+
+Hardware virtualization (used in cloud computing) allows a hypervisor to run
+multiple operating systems concurrently using the same physical memory, by
+adding another layer of address translation. When extended page tables (EPT)
+are enabled, the process above is used to translate from a virtual address into
+a \textit{guest-physical address}. The translation from guest-physical
+addresses to actual physical addresses uses the same process as above, except
+the physical address of the root node is stored in a virtual machine control
+structure.
+
+
 \subsection{Cachng and Paging Overview and Challenges}
 
 Desktop-class multi-core commodity CPUs have three levels of cache memory. Each
@@ -128,8 +158,6 @@ considered to be an implementation detail. Unfortunately, the indexing mehtod
 decides the set index for a given memory location, which decides the cache
 replacement policy, which leads to visible differences in execution times,
 which enables timing attacks.
-
-((describe paging))
 
 ((address translation interactions wih cache))
 
