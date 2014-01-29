@@ -55,6 +55,37 @@ iterate faster and rely on our verifier and memory manager to protect from
 bugs that would result in private data leaks.
 
 
+\subsection{Software Layers Overview}
+
+In an Infrastructure-as-a-Service (IaaS) cloud environment, such as Amazon EC2,
+commodity CPUs run software at four different privilege levels: System
+Management Mode (SMM), VMX root mode (also described as ring -1), kernel mode
+(ring 0) and user mode (ring 3). This section summarizes the relevant details
+and reviews where SGX and TXT fit into the levels.
+
+SMM is intended for use by the motherboard manufacturers to implement features
+such as fan control and deep sleep, and/or to emulate missing hardware. SMM
+mode is entered by asserting the SMI# pin on the CPU, and VMX root and kernel
+software can also get the southbridges on most existing motherboards to assert
+the SMI# pin by \textsc{out}-putting a byte to port 0xb2. The SMM code and data
+are stored in a memory area called SMRAM, which, in theory, is not readable or
+writable when the processor isn't running in SMM, but the protection mechanisms
+were bypassed multiple times \cite{duflot2006smm} \cite{rutkowska2008remap}
+\cite{wojtczuk2009smm}, and SMM-based rootkits have been demonstrated
+\cite{wecherowski2009smm} \cite{wecherowski2009smm}.
+
+IaaS cloud providers allow their customers to run their operating system of
+choice in a virtualized environment. Hardware virtualization
+\cite{uhlig2005intel}, called Virtual Machine Extensions (VMX) by Intel,
+adds support for a \textit{hypervisor} that runs at a higher privilege level
+(VMX root mode) than OS kernels, and is responsible for allocating hardware
+resources across multiple operating systems that share the same physical
+machine.
+
+((talk about txt and how it's used to start a vmx root, mention
+\cite{vasudevan2010hypervisor}))
+
+
 \subsection{Address Translation Overview}
 
 Recent commodity CPUs have many address translation modes, in order to run
@@ -85,7 +116,7 @@ the physical address of the root node is stored in a virtual machine control
 structure.
 
 
-\subsection{Cachng and Paging Overview and Challenges}
+\subsection{Caching Overview and Challenges}
 
 Desktop-class multi-core commodity CPUs have three levels of cache memory. Each
 core has its own L1 and L2, and all cores share an L3 cache. All cache levels
