@@ -92,6 +92,11 @@ integrity. Unfortunately, any SMM attack can be used to compromise Intel TXT
 security vulnerabilities have been found \cite{wojtczuk2009txt2}
 \cite{wojtczuk2011txt}.
 
+The mainstream operating systems have monolithic kernels (including device
+drivers, filesystem code, networking stacks, and video rendering code) run at
+ring 0, which is also called kernel mode. In cloud environments, the OS kernels
+provided by customers run at ring 0 in VMX non-root mode,
+
 
 \subsection{Address Translation Overview}
 
