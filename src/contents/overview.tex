@@ -55,13 +55,14 @@ iterate faster and rely on our verifier and memory manager to protect from
 bugs that would result in private data leaks.
 
 
-\subsection{Software Layers Overview}
+\subsection{Software Privilege Levels}
 
 In an Infrastructure-as-a-Service (IaaS) cloud environment, such as Amazon EC2,
 commodity CPUs run software at four different privilege levels: System
 Management Mode (SMM), VMX root mode (also described as ring -1), kernel mode
-(ring 0) and user mode (ring 3). This section summarizes the relevant details
-and reviews where SGX and TXT fit into the levels.
+(ring 0) and user mode (ring 3). This section outlines the interactions between
+TXT, SGX and the privilege levels, as well as the security issues that pertain
+to each level.
 
 SMM is intended for use by the motherboard manufacturers to implement features
 such as fan control and deep sleep, and/or to emulate missing hardware. SMM
@@ -92,10 +93,17 @@ integrity. Unfortunately, any SMM attack can be used to compromise Intel TXT
 security vulnerabilities have been found \cite{wojtczuk2009txt2}
 \cite{wojtczuk2011txt}.
 
-The mainstream operating systems have monolithic kernels (including device
-drivers, filesystem code, networking stacks, and video rendering code) run at
-ring 0, which is also called kernel mode. In cloud environments, the OS kernels
-provided by customers run at ring 0 in VMX non-root mode,
+The mainstream operating systems have monolithic kernels that include device
+drivers, filesystem code, networking stacks, and video rendering functionality,
+and run at ring 0 (kernel mode). Application code, such as a Web server or
+a game client, runs at ring 3 (user mode). Software running inside an SGX
+enclave executes at ring 3. Ring 0 software is responsible for scheduling the
+execution of code inside enclaves for allocating hardware resources (such as
+RAM) to the enclaves.
+
+In IaaS cloud environments, the virtual machine images provided by customers
+run in VMX non-root mode, so the kernel runs in VMX non-root ring 0, and the
+application code runs in VMX non-root ring 3.
 
 
 \subsection{Address Translation Overview}
