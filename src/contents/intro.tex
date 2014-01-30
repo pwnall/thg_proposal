@@ -102,8 +102,8 @@ denial of service attack. At the same time, an attack that compromises the
 operating system can cause a denial of service simply by disabling the network
 driver, and that cannot be worked around as long as the OS is untrusted.
 
-\subsection{Design Overview}
-\label{sec:overview}
+\subsection{Challenges and Opportunities}
+\label{sec:approach}
 
 Our threat model is minimal given the constraint of being applicable to
 commodity computers, in the sense that trusting the chip that contains the CPU
@@ -117,7 +117,11 @@ that have compromised the software running at all privilege levels, forcing us
 to conclude that we cannot rely on any software running on the infrastructure.
 
 The opportunity that our model brings is being able to take advantage of the
-isolation mechanisms built into modern CPUs.
+isolation mechanisms and the high level of integration in modern CPUs. For
+example, the memory controller that used to be relegated to the northbridge is
+now in the CPU, so it is part of the TCB, and we can rely on it to protect a
+range of physical memory from malicious devices connected to the system bus, by
+rejecting DMA transfers.
 
 We plan to use the CPU's secure execution features to create an isolated
 environment that the untrusted program will run in. We are most likely to end
@@ -125,6 +129,8 @@ up relying on Intel's Software Guard Extensions (SGX) \cite{anati2013sgx}.
 Unfortunately, no processor with SGX has been released yet, so we must rely on
 our interpretation of Intel's SGX programming reference manual
 \cite{intel2013sgxmanual}.
+
+\subsection{SGX Overview}
 
 SGX introduces a new execution mode called \textit{enclave mode}. While in
 enclave mode, the CPU can fetch code and data from an area of physical memory
