@@ -1,61 +1,19 @@
-\section{Design Overview}
-\label{sec:overview}
+\section{Background and Related Work}
+\label{sec:background}
 
-We plan to use the CPU's secure execution features to create an isolated
-environment that the untrusted program will run in. We are most likely to end
-up relying on Intel's Software Guard Extensions (SGX) \cite{anati2013sgx}.
-Unfortunately, no processor with SGX has been released yet, so we must rely on
-our interpretation of Intel's SGX programming reference manual
-\cite{intel2013sgxmanual}.
-
-SGX introduces a new execution mode called \textit{enclave mode}. While in
-enclave mode, the CPU can fetch code and data from an area of physical memory
-that is isolated from software running outside enclave mode (including SMM) and
-from the hardware connected to the system bus. The information stored in the
-isolated memory is encrypted\footnote{Actually, the SGX manual carefully
-tiptoes around this issue by saying "On implementations in which EPC is part of
-system DRAM, the contents of the EPC are protected by an encryption engine."}
-as it leaves the CPU. Furthermore, transitions to enclave mode must use
-pre-specified entry points (like transitions from user mode to kernel mode),
-and transitions from enclave mode store the processor state associated with
-enclave code execution inside the isolated memory area.
-
-Based on the contents of Intel's manual, it seems that we can trust the SGX
-implementation to guard the integrity of any computation that runs in enclave
-mode against tampering attempts from other software on the platform. However,
-on the privacy end, the provisions of SGX are lacking. The memory encryption
-measures specified in the manual do not guard against other software learning
-the memory access patterns of the software running inside enclave mode, which
-can be used to gain knowledge about the private data that the computation is
-running on. For example, it has been shown that cache timing attacks can be
-used to recover encryption keys \cite{bonneau2006cache}
-\cite{brumley2005remote} \cite{kocher1996timing}.
-
-We avoid leaking memory access patterns by replacing all the instructions that
-perform memory accesses in the software operating on private data with calls
-to a memory manager that is part of our TCB. The memory manager implements an
-oblivious RAM protocol \cite{stefanov2012path} to hide the software's memory
-access patterns. We follow the approach of Google Native Client
-\cite{yee2009native} \cite{sehr2010adapting}, namely we require that memory
-accesses are replaced by calls to a function during the software's compilation
-phase, and our TCB contains a loader that statically verifies the software to
-ensure that it does not perform any direct memory access. This results in a
-small TCB, compared to rewriting the software's machine code on the fly, and
-we expect that a technique similar to RockSalt \cite{morrisett2012rocksalt} can
-be used to prove the correctness of our verifier.
-
-SGX provides an attestation mechanism that assures a remote user that a piece
-of information was signed by a certain piece of software running inside a
-enclave. The signature includes a cryptographic hash of the software running
-inside the enclave. In our system, the signature only needs to cover the loader
-and memory manager, as the loader verifies the program that computes on
-private data, and ensures that the program meets the data owner's security
-policy. The data owner must only trust our TCB, and the software provider can
-iterate faster and rely on our verifier and memory manager to protect from
-bugs that would result in private data leaks.
+Arguing about the security of an application running on an mainstream computer
+using the x86 platform requires understanding the interactions between
+all the parts of an x86 execution environment (protection modes, address
+translation hardware, caches). This section provides an overview of these
+features from the context of Intel TXT and SGX, touches on existing attacks on
+TXT that took advantage of unexpected interactions between the features, and
+points out holes in the SGX design that can be used to snoop on a program's
+memory access patterns, which can reveal information about the private data
+that the program is working on.
 
 
 \subsection{Software Privilege Levels}
+\label{sec:rings}
 
 In an Infrastructure-as-a-Service (IaaS) cloud environment, such as Amazon EC2,
 commodity CPUs run software at four different privilege levels: System
@@ -70,7 +28,7 @@ mode is entered by asserting the SMI\# pin on the CPU, and VMX root and kernel
 software can also get the southbridges on most existing motherboards to assert
 the SMI\# pin by \textsc{out}-putting a byte to port 0xb2. The SMM code and
 data are stored in a memory area called SMRAM, which, in theory, is not
-readable or writable when the processor isn't running in SMM, but the
+readable or writable when the processor isn't running in SMM, but its
 protection mechanisms were bypassed multiple times \cite{duflot2006smm}
 \cite{rutkowska2008remap} \cite{wojtczuk2009smm}, and SMM-based rootkits have
 been demonstrated \cite{wecherowski2009smm} \cite{wecherowski2009smm}.
@@ -82,31 +40,46 @@ adds support for a \textit{hypervisor} (also called a Virtual Machine Monitor
 / VMM in the Intel documentation) that runs at a higher privilege level
 (VMX root mode) than OS kernels, and is responsible for allocating hardware
 resources across multiple operating systems that share the same physical
-machine. Hypervisor code generally runs at ring 0 in VMX root mode. The popular
-Xen hypervisor uses VMX root mode \cite{zhang2008xen}.
-\cite{mccune2010trustvisor} proposes using a hypervisor together with Intel
-TXT's dynamic root of trust for measurement (DRTM) to implement trusted
-execution. \cite{vasudevan2010requirements} argues that a dynamic root of
-trust mechanism, like Intel TXT, is necessary to ensure a hypervisor's
-integrity. Unfortunately, any SMM attack can be used to compromise Intel TXT
-\cite{wojtczuk2009txt}, and the TXT implementation is complex enough that
-security vulnerabilities have been found \cite{wojtczuk2009txt2}
-\cite{wojtczuk2011txt}.
+machine. Hypervisor code generally runs at ring 0 in VMX root mode.
 
-The mainstream operating systems have monolithic kernels that include device
+The popular Xen hypervisor uses VMX root mode for improved peformance and a
+smaller codebase \cite{zhang2008xen}. \cite{mccune2010trustvisor} proposes
+using a hypervisor together with Intel TXT's dynamic root of trust for
+measurement (DRTM) to implement trusted execution.
+\cite{vasudevan2010requirements} argues that a dynamic root of trust mechanism,
+like Intel TXT, is necessary to ensure a hypervisor's integrity. Unfortunately,
+any SMM attack can be used to compromise Intel TXT \cite{wojtczuk2009txt}, and
+the TXT implementation is complex enough that security vulnerabilities have
+been found \cite{wojtczuk2009txt2} \cite{wojtczuk2011txt}.
+
+Mainstream operating systems have monolithic kernels that include device
 drivers, filesystem code, networking stacks, and video rendering functionality,
 and run at ring 0 (kernel mode). Application code, such as a Web server or
 a game client, runs at ring 3 (user mode). Software running inside an SGX
-enclave executes at ring 3. Ring 0 software is responsible for scheduling the
-execution of code inside enclaves for allocating hardware resources (such as
-RAM) to the enclaves.
+enclave also executes at ring 3. The OS kernel (running at ring 0) is
+responsible for scheduling the execution of code inside enclaves and for
+allocating hardware resources (such as RAM) to the enclaves. In IaaS cloud
+environments, the virtual machine images provided by customers run in VMX
+non-root mode, so the kernel runs in VMX non-root ring 0, and the application
+code runs in VMX non-root ring 3. SGX is compatible with VMX, and the
+hypervisor is responsible for virtualizing a processor's SGX capabilities.
 
-In IaaS cloud environments, the virtual machine images provided by customers
-run in VMX non-root mode, so the kernel runs in VMX non-root ring 0, and the
-application code runs in VMX non-root ring 3.
+The monolithic kernel design leads to many opportunities for security
+vulnerabilities in kernel code. For example the Linux kernel has had a
+significant number of vulnerabilities patched every year, for the past 10 years
+\cite{cvedetails2014linux} \cite{chen2011linux}. Also, a successful attack on
+SMM or the hypervisor trivially translates into a compromised kernel. SGX
+accounts for the possibility of a compromised kernel or hypervisor with an
+attestation mechanism covering an enclave's contents, and with a hardware
+isolation mechanism for the software inside the enclave. In \S \ref{sec:sgx},
+we argue that SGX, as it is currently documented in \cite{intel2013sgxmanual},
+appears to provide integrity for the software inside the enclave, but
+definitely does not provide privacy, as a compromised SMM, hypervisor, or OS
+kernel can obtain the enclave's memory access patterns at high granularity.
 
 
-\subsection{Address Translation Overview}
+\subsection{Address Translation}
+\label{sec:paging}
 
 Recent commodity CPUs have many address translation modes, in order to run
 legacy software dating back to 1990 natively. This section summarizes the modes
@@ -136,7 +109,8 @@ the physical address of the root node is stored in a virtual machine control
 structure.
 
 
-\subsection{Caching Overview and Challenges}
+\subsection{Caching}
+\label{sec:caching}
 
 Desktop-class multi-core commodity CPUs have three levels of cache memory. Each
 core has its own L1 and L2, and all cores share an L3 cache. All cache levels
@@ -214,6 +188,7 @@ which enables timing attacks.
 
 
 \subsection{SGX Overview and Limitations}
+\label{sec:sgx}
 
 This section summarizes the aspects of the SGX documentation that are relevant
 to our system. The interested but time-constrained reader is advised to read

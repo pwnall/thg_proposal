@@ -1,4 +1,4 @@
-\section{Motivation}
+\section{Introduction}
 \label{sec:intro}
 
 In order to achieve certain performance goals, software engineers must often
@@ -8,6 +8,9 @@ turn might be different from the suppliers of the software that processes the
 data. This raises the problem that the data owner must trust both the owner
 of the computing infrastructure and the software supplier to handle the data
 according to some privacy policy.
+
+\subsection{Motivation}
+\label{sec:motivation}
 
 The most popular instance of the above problem is cloud computing using public
 clouds. For example, CheapoTax, a software provider, might provide tax return
@@ -38,6 +41,7 @@ to opportunities for cheating \cite{youtube2013lolcheating}
 
 
 \subsection{Threat Model}
+\label{sec:threat}
 
 Our threat model assumes that the infrastructure is shared by multiple ongoing
 computations, potentially using software from different mutually distrusting
@@ -89,3 +93,61 @@ to decrypt private data and to perform any computation. This can lead to a
 denial of service attack. At the same time, an attack that compromises the
 operating system can cause a denial of service simply by disabling the network
 driver, and that cannot be worked around as long as the OS is untrusted.
+
+\subsection{Design Overview}
+\label{sec:overview}
+
+We plan to use the CPU's secure execution features to create an isolated
+environment that the untrusted program will run in. We are most likely to end
+up relying on Intel's Software Guard Extensions (SGX) \cite{anati2013sgx}.
+Unfortunately, no processor with SGX has been released yet, so we must rely on
+our interpretation of Intel's SGX programming reference manual
+\cite{intel2013sgxmanual}.
+
+SGX introduces a new execution mode called \textit{enclave mode}. While in
+enclave mode, the CPU can fetch code and data from an area of physical memory
+that is isolated from software running outside enclave mode (including SMM) and
+from the hardware connected to the system bus. The information stored in the
+isolated memory is encrypted\footnote{Actually, the SGX manual carefully
+tiptoes around this issue by saying "On implementations in which EPC is part of
+system DRAM, the contents of the EPC are protected by an encryption engine."}
+as it leaves the CPU. Furthermore, transitions to enclave mode must use
+pre-specified entry points (like transitions from user mode to kernel mode),
+and transitions from enclave mode store the processor state associated with
+enclave code execution inside the isolated memory area.
+
+Based on the contents of Intel's manual, it seems that we can trust the SGX
+implementation to guard the integrity of any computation that runs in enclave
+mode against tampering attempts from other software on the platform. However,
+on the privacy end, the provisions of SGX are lacking. The memory encryption
+measures specified in the manual do not guard against other software learning
+the memory access patterns of the software running inside enclave mode, which
+can be used to gain knowledge about the private data that the computation is
+running on. For example, it has been shown that cache timing attacks can be
+used to recover encryption keys \cite{bonneau2006cache}
+\cite{brumley2005remote} \cite{kocher1996timing}.
+
+We avoid leaking memory access patterns by replacing all the instructions that
+perform memory accesses in the software operating on private data with calls
+to a memory manager that is part of our TCB. The memory manager implements an
+oblivious RAM protocol \cite{stefanov2012path} to hide the software's memory
+access patterns. We follow the approach of Google Native Client
+\cite{yee2009native} \cite{sehr2010adapting}, namely we require that memory
+accesses are replaced by calls to a function during the software's compilation
+phase, and our TCB contains a loader that statically verifies the software to
+ensure that it does not perform any direct memory access. This results in a
+small TCB, compared to rewriting the software's machine code on the fly, and
+we expect that a technique similar to RockSalt \cite{morrisett2012rocksalt} can
+be used to prove the correctness of our verifier.
+
+SGX provides an attestation mechanism that assures a remote user that a piece
+of information was signed by a certain piece of software running inside a
+enclave. The signature includes a cryptographic hash of the software running
+inside the enclave. In our system, the signature only needs to cover the loader
+and memory manager, as the loader verifies the program that computes on
+private data, and ensures that the program meets the data owner's security
+policy. The data owner must only trust our TCB, and the software provider can
+iterate faster and rely on our verifier and memory manager to protect from
+bugs that would result in private data leaks.
+
+
