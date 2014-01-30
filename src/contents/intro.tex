@@ -61,7 +61,15 @@ exploit vulnerabilities in the infrastructure software. The programs that run
 over the private data can also have vulnerabilities, which can be exploited by
 attackers. An attacker can also motivate a datacenter maintainance employee to
 attach a physical device to a server, but this attack is significantly harder
-to mount than a purely software attack.
+to mount than a purely software attack. At the same time, a software attack
+that takes control of the kernel or hypervisor can be used to reflash a
+computer's BIOS \cite{wojtczuk2010bios}. On computers with Intel's Active
+Management Technology (AMT) \cite{intel2013amt} the BIOS also contains the code
+executed by the Manageability Engine (ME), a service processor that is embedded
+in the southbridge, and has direct RAM access via DMA, as well as hooks into
+the boot process \cite{tereshkin2009amt}. Therefore, a software attack that
+escalates into taking over the AMT's ME can give the attacker powers that are
+traditionally associated with hardware attacks.
 
 In the multiplayer game case, the private data is the full game state, and the
 data owner is the same as the software supplier. The infrastructure is the
