@@ -105,6 +105,20 @@ driver, and that cannot be worked around as long as the OS is untrusted.
 \subsection{Design Overview}
 \label{sec:overview}
 
+Our threat model is minimal given the constraint of being applicable to
+commodity computers, in the sense that trusting the chip that contains the CPU
+is a prerequisite to being able to trust any computing performed by the CPU.
+
+The challenge in providing trusting computing guarantees to software running on
+commodity computers is that after 30 years of organic evolution, today's x86
+CPUs expose many architectural features and privilege levels that interact in
+complex ways. \S \ref{sec:overview} reviews these features and mentions attacks
+that have compromised the software running at all privilege levels, forcing us
+to conclude that we cannot rely on any software running on the infrastructure.
+
+The opportunity that our model brings is being able to take advantage of the
+isolation mechanisms built into modern CPUs.
+
 We plan to use the CPU's secure execution features to create an isolated
 environment that the untrusted program will run in. We are most likely to end
 up relying on Intel's Software Guard Extensions (SGX) \cite{anati2013sgx}.
