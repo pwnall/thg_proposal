@@ -102,6 +102,7 @@ denial of service attack. At the same time, an attack that compromises the
 operating system can cause a denial of service simply by disabling the network
 driver, and that cannot be worked around as long as the OS is untrusted.
 
+
 \subsection{Challenges and Opportunities}
 
 Our threat model is minimal given the constraint of being applicable to
@@ -135,16 +136,28 @@ the resulting TCB would be very difficult to secure. Therefore, we focus our
 attention on Intel's Software Guard Exections (SGX) \cite{mckeen2013innovative}
 \cite{anati2013sgx}.
 
+
 \subsection{Towards Secure Computation}
 \label{sec:approach}
 
 \S \ref{sec:sgx} provides an overview of SGX and its interactions with other
 CPU features, and argues that SGX provides integrity guarantees in our threat
 model, but does not prevent a malicious hypervisor or OS from taking advantage
-of paging (\S \ref{sec:paging}) and caching (\S \ref{sec:caching}) to learn
-about the memory access patterns of the software protected by SGX, which can be
-used to gain knowledge about the private data used in the computation. For
-example, cache timing attacks can be used to recover encryption keys
-\cite{bonneau2006cache} \cite{brumley2005remote} \cite{kocher1996timing}.
+of address translation (\S \ref{sec:paging}) and caching (\S \ref{sec:caching})
+to learn about the memory access patterns of the software protected by SGX,
+which can be used to gain knowledge about the private data used in the
+computation. For example, cache timing attacks can be used to recover
+encryption keys \cite{bonneau2006cache} \cite{brumley2005remote}
+\cite{kocher1996timing}.
 
-
+In \S \ref{sec:design}, we outline a method for hiding an application's memory
+access patterns by taking advantage of the L2 cache layout (see \S
+\ref{sec:caching}) to control when data is evicted from the cache. We can use
+an oblivious RAM protocol \cite{stefanov2012path} to hide the cache eviction
+patterns. Unfortunately, our scheme still leaks memory access patterns under
+the currently documented SGX design, due to page faults (\S \ref{sec:paging})
+and to asynchronous enclave exits (AEX). We explore the problem of devising a
+minimal set of changes to SGX that make our scheme work. At the same time, we
+explore a scheme that can protect memory accesses under the current SGX design,
+and that is more practical than fully-homomorphic encryption
+\cite{gentry2009fhe} \cite{naehrig2011can}.
