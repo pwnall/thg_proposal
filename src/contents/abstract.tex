@@ -26,12 +26,11 @@ manner, our threat model covers against skilled attackers who can exploit bugs
 in both the infrastructure and the software that performs computation over the
 private data.
 
-We have surveyed recent proposals, namely Software Guard Extensions (SGX)
-\cite{mckeen2013innovative} \cite{anati2013sgx} and Trusted Execution
-Technology (TXT) \cite{grawrock2009txt}, and find that they leak private data
-by exposing the software's memory access patterns to other programs sharing the
+We have analyzed Intel's most recent proposal for achieving trusted computing,
+Software Guard Extensions (SGX), and find that it leaks private data by
+exposing the software's memory access patterns to other programs sharing the
 infrastructure and to the infrastructure's owners. We aim to find a minimal set
 of changes to the SGX proposal that would make it not reveal memory access
-patterns.
+patterns, when used in conjunction with our software loader.
 
 \end{abstract}

@@ -1,0 +1,28 @@
+\section{Design}
+\label{sec:design}
+
+
+We avoid leaking memory access patterns by replacing all the instructions that
+perform memory accesses in the software operating on private data with calls
+to a memory manager that is part of our TCB. The memory manager implements an
+oblivious RAM protocol \cite{stefanov2012path} to hide the software's memory
+access patterns. We follow the approach of Google Native Client
+\cite{yee2009native} \cite{sehr2010adapting}, namely we require that memory
+accesses are replaced by calls to a function during the software's compilation
+phase, and our TCB contains a loader that statically verifies the software to
+ensure that it does not perform any direct memory access. This results in a
+small TCB, compared to rewriting the software's machine code on the fly, and
+we expect that a technique similar to RockSalt \cite{morrisett2012rocksalt} can
+be used to prove the correctness of our verifier.
+
+SGX provides an attestation mechanism that assures a remote user that a piece
+of information was signed by a certain piece of software running inside a
+enclave. The signature includes a cryptographic hash of the software running
+inside the enclave. In our system, the signature only needs to cover the loader
+and memory manager, as the loader verifies the program that computes on
+private data, and ensures that the program meets the data owner's security
+policy. The data owner must only trust our TCB, and the software provider can
+iterate faster and rely on our verifier and memory manager to protect from
+bugs that would result in private data leaks.
+
+

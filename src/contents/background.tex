@@ -56,10 +56,10 @@ Mainstream operating systems have monolithic kernels that include device
 drivers, filesystem code, networking stacks, and video rendering functionality,
 and run at ring 0 (kernel mode). Application code, such as a Web server or
 a game client, runs at ring 3 (user mode). Software running inside an SGX
-enclave also executes at ring 3. The OS kernel (running at ring 0) is
-responsible for scheduling the execution of code inside enclaves and for
-allocating hardware resources (such as RAM) to the enclaves. In IaaS cloud
-environments, the virtual machine images provided by customers run in VMX
+enclave (isolated environment) also executes at ring 3. The OS kernel, running
+at ring 0, is responsible for scheduling the execution of code inside enclaves
+and for allocating hardware resources (such as RAM) to the enclaves. In IaaS
+cloud environments, the virtual machine images provided by customers run in VMX
 non-root mode, so the kernel runs in VMX non-root ring 0, and the application
 code runs in VMX non-root ring 3. SGX is compatible with VMX, and the
 hypervisor is responsible for virtualizing a processor's SGX capabilities.
@@ -196,6 +196,18 @@ to our system. The interested but time-constrained reader is advised to read
 to SGX), 3 (Enclave Operation), 4 (Enclave Exiting Events) and 6 (SGX
 Interactions with IA32 and Intel 64 Architecture) of \cite{intel2013sgxmanual}
 for a deeper understanding of SGX.
+
+SGX introduces a new execution mode called \textit{enclave mode}. While in
+enclave mode, the CPU can fetch code and data from an area of physical memory
+that is isolated from software running outside enclave mode (including SMM) and
+from the hardware connected to the system bus. The information stored in the
+isolated memory is encrypted\footnote{Actually, the SGX manual carefully
+tiptoes around this issue by saying "On implementations in which EPC is part of
+system DRAM, the contents of the EPC are protected by an encryption engine."}
+as it leaves the CPU. Furthermore, transitions to enclave mode must use
+pre-specified entry points (like transitions from user mode to kernel mode),
+and transitions from enclave mode store the processor state associated with
+enclave code execution inside the isolated memory area.
 
 SGX isolates the code and data in an enclave by placing it in a protected area
 of physical memory called the Enclave Page Cache (EPC). EPC is a continuous
