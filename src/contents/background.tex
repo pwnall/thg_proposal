@@ -18,20 +18,22 @@ that the program is working on.
 In an Infrastructure-as-a-Service (IaaS) cloud environment, such as Amazon EC2,
 commodity CPUs run software at four different privilege levels: System
 Management Mode (SMM), VMX root mode (also described as ring -1), kernel mode
-(ring 0) and user mode (ring 3). This section outlines the interactions between
-TXT, SGX and the privilege levels, as well as the security issues that pertain
-to each level.
+(ring 0) and user mode (ring 3). This section outlines the consequences of a
+successfully exploited vulnerability at each privilege level, and sets the
+stage for analyzing the SGX protection model.
 
 SMM is intended for use by the motherboard manufacturers to implement features
 such as fan control and deep sleep, and/or to emulate missing hardware. SMM
-mode is entered by asserting the SMI\# pin on the CPU, and VMX root and kernel
-software can also get the southbridges on most existing motherboards to assert
-the SMI\# pin by \textsc{out}-putting a byte to port 0xb2. The SMM code and
-data are stored in a memory area called SMRAM, which, in theory, is not
-readable or writable when the processor isn't running in SMM, but its
-protection mechanisms were bypassed multiple times \cite{duflot2006smm}
-\cite{rutkowska2008remap} \cite{wojtczuk2009smm}, and SMM-based rootkits have
-been demonstrated \cite{wecherowski2009smm} \cite{wecherowski2009smm}.
+mode is entered by asserting the SMI\# pin on the CPU, which was initially
+designed exclusively for hardware use. However, the southbridges on most
+motherboards provide a method for the hypervisor and kernel to get the SMI\#
+pin asserted\footnote{Most southbridges assert SMI\# when a byte is written to
+port 0xb2 via the \textsc{out} opcode}. The SMM code and data are stored in a
+memory area called SMRAM, which, in theory, is not readable or writable when
+the processor isn't running in SMM, but its protection mechanisms were bypassed
+multiple times \cite{duflot2006smm} \cite{rutkowska2008remap}
+\cite{wojtczuk2009smm}, and SMM-based rootkits have been demonstrated
+\cite{wecherowski2009smm} \cite{wecherowski2009smm}.
 
 IaaS cloud providers allow their customers to run their operating system of
 choice in a virtualized environment. Hardware virtualization
@@ -82,8 +84,8 @@ kernel can obtain the enclave's memory access patterns at high granularity.
 \label{sec:paging}
 
 Recent commodity CPUs have many address translation modes, in order to run
-legacy software dating back to 1990 natively. This section summarizes the modes
-used in modern 64-bit operating systems and 64-bit cloud environments.
+legacy software dating back to 1990 natively. This section only addresses the
+modes used in modern 64-bit operating systems and 64-bit cloud environments.
 
 64-bit desktop operating systems use the addressing mode called IA-32e in
 Intel programming manual \cite{intel2013manual}, which translates 48-bit
@@ -91,13 +93,13 @@ Intel programming manual \cite{intel2013manual}, which translates 48-bit
 \footnote{The size of a physical address is CPU-dependent, and is 40 bits for
 recent desktop CPUs and 44 bits for recent high-end server CPUs.}. The bottom
 12 bits of a virtual address are not changed by the translation. The top 36
-bits are grouped into four 9-bit indexes used to navigate a data structure that
-closely resembles a perfectly balanced 512-ary search tree where the nodes do
-not store keys. Each node is an array of 512 8-byte entries that contain the
-physical addresses of the next-level children as well as some flags. The
-address of the root node is stored in the CR3 register. The arrays in the
-last-level nodes contain the physical addresses that are the result of the page
-translation.
+bits are grouped into four 9-bit indexes used to navigate a data structure
+called \textit{the page tables}. Despite its name, the data structure closely
+resembles a perfectly balanced 512-ary search tree where the nodes do not store
+keys. Each node is an array of 512 8-byte entries that contain the physical
+addresses of the next-level children as well as some flags. The address of the
+root node is stored in the CR3 register. The arrays in the last-level nodes
+contain the physical addresses that are the result of the address translation.
 
 Hardware virtualization (used in cloud computing) allows a hypervisor to run
 multiple operating systems concurrently using the same physical memory, by
@@ -107,6 +109,21 @@ a \textit{guest-physical address}. The translation from guest-physical
 addresses to actual physical addresses uses the same process as above, except
 the physical address of the root node is stored in a virtual machine control
 structure.
+
+Each entry in the page tables has some boolean flags, in addition to the
+pointer to the next level. The following flags are particularly interesting for
+our goals. The \textit{present} (P) flag is set to 0 for pages that have been
+swapped out to disk. When address translation encounters a page table entry
+where P is 0, the CPU generates a page fault (\#PF), and the OS kernel is
+responsible for swapping the page back into RAM and resuming execution. If
+an extended page table (EPT) entry has the P flag set 0, the CPU performs a VM
+exit, and the hypervisor has an opportunity to bring the page into RAM. The
+\textit{accessed} (A) and \textit{dirty} (D) flags are set  XXXXX
+
+
+Address translation applies to the software running in an SGX enclave
+(isolated environment). This means that both the OS kernel and the hypervisor
+have an impact over
 
 
 \subsection{Caching}
