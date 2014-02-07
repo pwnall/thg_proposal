@@ -89,11 +89,11 @@ modes used in modern 64-bit operating systems and 64-bit cloud environments.
 
 64-bit desktop operating systems use the addressing mode called IA-32e in
 Intel programming manual \cite{intel2013manual}, which translates 48-bit
-\textit{virtual addresses} into \textit{physical addresses} of at most 52 bits
-\footnote{The size of a physical address is CPU-dependent, and is 40 bits for
-recent desktop CPUs and 44 bits for recent high-end server CPUs.}. The bottom
-12 bits of a virtual address are not changed by the translation. The top 36
-bits are grouped into four 9-bit indexes used to navigate a data structure
+\textit{virtual addresses} into \textit{physical addresses} of at most 52
+bits\footnote{The size of a physical address is CPU-dependent, and is 40 bits
+for recent desktop CPUs and 44 bits for recent high-end server CPUs.}. The
+bottom 12 bits of a virtual address are not changed by the translation. The top
+36 bits are grouped into four 9-bit indexes used to navigate a data structure
 called \textit{the page tables}. Despite its name, the data structure closely
 resembles a perfectly balanced 512-ary search tree where the nodes do not store
 keys. Each node is an array of 512 8-byte entries that contain the physical
@@ -118,12 +118,18 @@ where P is 0, the CPU generates a page fault (\#PF), and the OS kernel is
 responsible for swapping the page back into RAM and resuming execution. If
 an extended page table (EPT) entry has the P flag set 0, the CPU performs a VM
 exit, and the hypervisor has an opportunity to bring the page into RAM. The
-\textit{accessed} (A) and \textit{dirty} (D) flags are set  XXXXX
-
+\textit{accessed} (A) flag is set whenever the address translation machinery
+reads a page table entry, and the \textit{dirty} (D) flag is set when an entry
+is accessed by a memory write operation. The A and D flags give the hypervisor
+and OS kernel insight into application memory access patterns, to support page
+eviciton algorithms.
 
 Address translation applies to the software running in an SGX enclave
 (isolated environment). This means that both the OS kernel and the hypervisor
-have an impact over
+have an impact over the mapping of virtual addresses to physical addresses, and
+either of them can take advantage of page faults and the A and D flags in page
+table entries to obtain the SGX application's memory access pattern, at page
+granularity.
 
 
 \subsection{Caching}
