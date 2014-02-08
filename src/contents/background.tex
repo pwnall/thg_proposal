@@ -132,7 +132,7 @@ table entries to obtain the SGX application's memory access pattern, at page
 granularity.
 
 
-\subsection{Caching}
+\subsection{CPU Caches}
 \label{sec:caching}
 
 Desktop-class multi-core commodity CPUs have three levels of cache memory. Each
@@ -182,11 +182,11 @@ According to the CPUID instruction results and the Intel programming manuals
 \cite{intel2013manual}, the L3 cache of recent processors does not use direct
 set indexing, and instead uses a "complex" indexing scheme. The manuals do not
 describe the scheme, so our system cannot rely on the L3 cache. Due to the lack
-of a specification, our system treats L3 cache as untrusted memory. This is
-rather unfortunate because, although the shared aspect of the L3 cache would
-introduce additional complexity in a design, its large size (30MB on high-end
-CPUs, compared to 256KB of per-core L2 cache) would make "taming" this last
-level of cache very attractive.
+of a specification, our system must treat the L3 cache as untrusted memory.
+This is rather unfortunate because, although the shared aspect of the L3 cache
+would introduce additional complexity in a design, its large size (30MB on
+high-end CPUs, compared to 256KB of per-core L2 cache) would make "taming" this
+last level of cache memory very attractive.
 
 When paging is enabled, translating the virtual memory addresses used by
 software into physical memory addresses requires as many as 4 memory accesses,
@@ -202,12 +202,10 @@ $p = 12$, and all recent processors have 64-byte cache lines ($l = 6$) and
 The L2 cache in recent Intel processors is known to use physical indexing
 \cite{patterson2013architecture}. The indexing method is not documented in
 Intel's manuals and is not reported by the CPUID instruction, as it is
-considered to be an implementation detail. Unfortunately, the indexing mehtod
-decides the set index for a given memory location, which decides the cache
-replacement policy, which leads to visible differences in execution times,
-which enables timing attacks.
-
-((address translation interactions wih cache))
+considered to be an implementation detail. However, the indexing mehtod
+determines the set index for a given memory location, and knowing which memory
+addresses are stored in the same set is crucial for mounting and defending
+against cache timing attacks.
 
 
 \subsection{SGX Overview and Limitations}
@@ -220,8 +218,19 @@ to SGX), 3 (Enclave Operation), 4 (Enclave Exiting Events) and 6 (SGX
 Interactions with IA32 and Intel 64 Architecture) of \cite{intel2013sgxmanual}
 for a deeper understanding of SGX.
 
-SGX introduces a new execution mode called \textit{enclave mode}. While in
-enclave mode, the CPU can fetch code and data from an area of physical memory
+SGX introduces a protected execution environment, called an \textit{enclave}.
+The code and data in an enclave ((EDIT HERE)))
+
+by placing it in a protected area
+of physical memory called the Enclave Page Cache (EPC). EPC is a continuous
+region of the Processor Reserved Memory (PRM) area, which in turn is a
+continuous region of DRAM. Both the PRM and the EPC are set up by the BIOS
+during the computer's boot sequence. The memory controller inside the CPU
+blocks any DMA access to PRM, which protects the EPC area from hardware
+connected to the system bus. The CPU disallows EPC access to software not
+running in enclave mode.
+
+
 that is isolated from software running outside enclave mode (including SMM) and
 from the hardware connected to the system bus. The information stored in the
 isolated memory is encrypted\footnote{Actually, the SGX manual carefully
@@ -232,14 +241,6 @@ pre-specified entry points (like transitions from user mode to kernel mode),
 and transitions from enclave mode store the processor state associated with
 enclave code execution inside the isolated memory area.
 
-SGX isolates the code and data in an enclave by placing it in a protected area
-of physical memory called the Enclave Page Cache (EPC). EPC is a continuous
-region of the Processor Reserved Memory (PRM) area, which in turn is a
-continuous region of DRAM. Both the PRM and the EPC are set up by the BIOS
-during the computer's boot sequence. The memory controller inside the CPU
-blocks any DMA access to PRM, which protects the EPC area from hardware
-connected to the system bus. The CPU disallows EPC access to software not
-running in enclave mode.
 
 SGX was designed to protect application-level code. Enclave execution always
 happens in protected mode, at ring 3 (in user-mode, not kernel-mode). Also, SGX
