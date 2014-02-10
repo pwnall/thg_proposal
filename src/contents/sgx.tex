@@ -1,0 +1,138 @@
+\section{Software Guard Extensions (SGX)}
+\label{sec:sgx}
+
+This section summarizes the aspects of the SGX documentation that are relevant
+to our system. The interested but time-constrained reader is advised to read
+\cite{mckeen2013innovative}, \cite{anati2013sgx}, and Chapters 1 (Introduction
+to SGX), 3 (Enclave Operation), 4 (Enclave Exiting Events) and 6 (SGX
+Interactions with IA32 and Intel 64 Architecture) of \cite{intel2013sgxmanual}
+for a deeper understanding of SGX.
+
+
+\subsection{SGX Overview}
+\label{sec:sgx_overview}
+
+SGX introduces a protected execution environment, called an \textit{enclave}.
+An enclave can's code and data are protected by placing them inside the Enclave
+Page Cache (EPC), which is a subset of the Processor Reserved Memory (PRM)
+area. The EPC is split in 4KB pages pages. Each page is associated with an
+enclave. EPC page memory accesses coming from code outside the EPC page's
+enclave are blocked by the CPU. This access check covers all privilege levels,
+including SMM. The memory controller inside the CPU blocks any DMA access to
+PRM, so EPC pages cannot be accessed by hardware via DMA.
+
+The EPC contents is encrypted\footnote{Actually, the SGX manual carefully
+tiptoes around this issue by saying "On implementations in which EPC is part of
+system DRAM, the contents of the EPC are protected by an encryption engine."}
+as it leaves the CPU, to prevent against bus tapping attacks. Although the data
+is encrypted, the memory addresses are not protected, exposing the enclave
+code's memory access patterns.
+
+Execution flow can only enter an enclave via special CPU instructions
+(\texttt{EENTER}, \texttt{ERESUME}, \texttt{EEXIT}), which are similar to the
+mechanism for switching from user mode to kernel mode. Enclave execution always
+happens in protected mode, at ring 3, and uses the address translation set up
+by the OS kernel and hypervisor (\S \ref{sec:paging}). \texttt{EENTER}
+transfers control to a predefined entry point in the enclave, and
+\texttt{EEXIT} leaves the enclave.
+
+To avoid leaking private data, a CPU that is executing enclave code does not
+directly service an interrupt, fault (e.g., a page fault) or VM exit. Instead,
+the CPU first performs an Asynchronous Enclave Exit (AEX) to switch from
+enclave code to ring 3 code, and then services the interrupt, fault, or VM
+exit.  The CPU performs an AEX by saving the CPU state into a predefined area
+inside the enclave and transfers control to a pre-specified instruction outside
+the enclave, replacing CPU registers with synthetic values. After the
+interrupt, fault or VM exit is serviced, its handler returns control to ring 3
+code outside the enclave, which performs an \texttt{ERESUME}, which transfers
+control back into the enclave and restores the CPU state at the time the
+enclave execution was interrupted.
+
+The allocation of EPC pages to enclaves is delegated to the OS kernel (or
+hypervisor), and done via dedicated ring 0 CPU instructions. \texttt{EADD}
+allocates new pages to an enclave under construction, and \texttt{EREMOVE}
+deallocates pages during enclave tear-down. \texttt{EWB} evicts\footnote{
+Multi-threaded enclaves require more steps that are orthogonal to the issues
+addressed by this work.} an EPC page to RAM space that the OS kernel can
+access, and \texttt{ELDB}\footnote{SGX specifies two related instructions,
+\texttt{ELDB} and \texttt{ELDU}. The distinction is irrelevant for our
+purposes.} loads a previously evicted page from kernel-acessible RAM back into
+the EPC.
+
+\texttt{EADD} associates each EPC page with a virtual address used to access
+it, and the association is maintained by the \texttt{EWB} / \texttt{ELDB} pair.
+The CPU enforces\footnote{The CPU generates a general protection fault (\#GP)
+if an address translation that results in an EPC page uses the wrong virtual
+address as input.} the invariant that an EPC page can only be accessed using
+the virtual address associated with it. This mechanism ensures that the OS
+kernel and hypervisor maintain a consistent mapping of virtual addresses to
+EPC pages. The CPU encrypts and HMACs pages evicted with \texttt{EWB},
+providing privacy and integrity guarantees, including protection against replay
+attacks. The details are described in \cite{intel2013sgxmanual}.
+
+Page faults in enclave code are handled using the AEX process. The CR2
+register, which normally holds the virtual address that causes the fault, has
+its bottom 12 bits set to zero. The other bits of CR2 are necessary for the OS
+kernel or hypervisor to know which page needs to be loaded in RAM or into the
+EPC. This allows a curious OS kernel or hypervisor to obtain a page-level
+memory access trace for a program running inside an enclave, simply by making
+sure that only one page is present at any given time.
+
+
+\subsection{SGX Limitations}
+
+\subsubsection{Hyperthreading Leaks}
+
+Modern Intel CPUs feature hyper-threading, which means that each core has two
+(or more) fetch and decode units that are presented as separate logical
+processors running separate threads. The threads share the other core
+resources, such as execution units and L1 and L2 caches. SGX does not prevent
+hyper-threading, so a malicious OS kernel or hypervisor can schedule a thread
+executing enclave code and a snooping thread on logical processors on same
+core. The snooping thread can use the processor's high-performance counter
+\cite{petters1999making} to get information about the instructions and memory
+access patterns of the thread executing enclave code.
+
+A promising approach for preventing against hyper-threading leaks is to
+effectively disable hyper-threading, by using \texttt{CPUID} to find out the
+number of logical processors in the current core, and to require the OS to
+schedule threads in the same enclave on all the logical processors. This could
+be implemented by having the main thread spinlock waiting for the other threads
+to start, before any protected computation is performed. However, a malicious
+kernel or hypervisor can de-schedule the other threads after the main thread
+performed the spinlock check, so this technique cannot be used reliably.
+
+\subsubsection{Page-Level Memory Accesss}
+
+
+
+
+
+There are many other channels that leak memory access information.
+
+\begin{itemize}
+
+\item Enclave mode sets the accessed and dirty bits appropriately on all levels
+      of the paging structures involved in address translation, exposing access
+      information to both the OS and the VMM.
+
+\item Interrupts that cause an asynchronous exit (AEX) from enclave mode flush
+      the processor's TLB, but leave the cache contents intact, so the OS or
+      VMM can probe the cache to see which lines were replaced by the enclave
+      software, which reveals information about the software's memory access
+      patterns.
+
+\item Returning into enclave mode from an AEX via the ERESUME instruction
+      flushes the TLB, so the OS and VMM can get information about the enclave
+      software's memory accesses even if the targeted memory is still cached,
+      by marking the appropriate page table and/or page directory entries
+      \textit{not present}.
+
+\item The PRM can be set up by the BIOS as write-back (WB) or uncacheable (UC)
+      memory. If the PRM is set as uncacheable, an adversary with physical
+      access and the tools to tap the system bus can see the enclave program's
+      memory accesses, possibly at word granularity.
+
+\end{itemize}
+
+
