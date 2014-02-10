@@ -219,31 +219,29 @@ Interactions with IA32 and Intel 64 Architecture) of \cite{intel2013sgxmanual}
 for a deeper understanding of SGX.
 
 SGX introduces a protected execution environment, called an \textit{enclave}.
-The code and data in an enclave ((EDIT HERE)))
+An enclave can's code and data are protected by placing them inside the Enclave
+Page Cache (EPC), which is a subset of the Processor Reserved Memory (PRM)
+area. The EPC is split in 4KB pages pages. Each page is associated with an
+enclave. EPC page memory accesses coming from code outside the EPC page's
+enclave are blocked by the CPU. This access check covers all privilege levels,
+including SMM. The memory controller inside the CPU blocks any DMA access to
+PRM, so EPC pages cannot be accessed by hardware via DMA.
 
-by placing it in a protected area
-of physical memory called the Enclave Page Cache (EPC). EPC is a continuous
-region of the Processor Reserved Memory (PRM) area, which in turn is a
-continuous region of DRAM. Both the PRM and the EPC are set up by the BIOS
-during the computer's boot sequence. The memory controller inside the CPU
-blocks any DMA access to PRM, which protects the EPC area from hardware
-connected to the system bus. The CPU disallows EPC access to software not
-running in enclave mode.
-
-
-that is isolated from software running outside enclave mode (including SMM) and
-from the hardware connected to the system bus. The information stored in the
-isolated memory is encrypted\footnote{Actually, the SGX manual carefully
+The EPC contents is encrypted\footnote{Actually, the SGX manual carefully
 tiptoes around this issue by saying "On implementations in which EPC is part of
 system DRAM, the contents of the EPC are protected by an encryption engine."}
-as it leaves the CPU. Furthermore, transitions to enclave mode must use
-pre-specified entry points (like transitions from user mode to kernel mode),
-and transitions from enclave mode store the processor state associated with
-enclave code execution inside the isolated memory area.
+as it leaves the CPU, to prevent against bus tapping attacks. Although the data
+is encrypted, the memory addresses are not protected, exposing the enclave
+code's memory access patterns.
+
+Execution flow can only enter an enclave via special CPU instructions
+(\texttt{EENTER}, \texttt{ERESUME}, \texttt{EEXIT}), which are similar to the
+mechanism for switching from user mode to kernel mode. Enclave execution always
+happens in protected mode, at ring 3, and uses the address translation set up
+by the OS kernel and hypervisor (\S \ref{sec:paging}). \texttt{EENTER}
 
 
-SGX was designed to protect application-level code. Enclave execution always
-happens in protected mode, at ring 3 (in user-mode, not kernel-mode). Also, SGX
+Also, SGX
 supports applications whose memory footprint is larger than the EPC size. This
 is accomplished by having the operating system map 4KB pages inside each
 enclave's linear address space to EPC pages. The mapping is maintained in a
@@ -251,6 +249,8 @@ similar manner to how virtual memory works \cite{jacob1998virtual}, except that
 EPC pages are paged out to RAM in an encrypted form, and SGX uses a data
 structure to provide integrity and freshness guarantees for EPC pages that are
 paged out and later paged in.
+
+
 
 Logical memory addresses used by software in enclave mode are handled in a
 similar way to ring 3 addresses. A limited form of segmentation is in effect,
