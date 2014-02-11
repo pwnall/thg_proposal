@@ -114,24 +114,32 @@ structure.
 
 Each entry in the page tables has some boolean flags, in addition to the
 pointer to the next level. The following flags are particularly interesting for
-our goals. The \textit{present} (P) flag is set to 0 for pages that have been
-swapped out to disk. When address translation encounters a page table entry
-where P is 0, the CPU generates a page fault (\#PF), and the OS kernel is
-responsible for swapping the page back into RAM and resuming execution. If
-an extended page table (EPT) entry has the P flag set 0, the CPU performs a VM
-exit, and the hypervisor has an opportunity to bring the page into RAM. The
-\textit{accessed} (A) flag is set whenever the address translation machinery
-reads a page table entry, and the \textit{dirty} (D) flag is set when an entry
-is accessed by a memory write operation. The A and D flags give the hypervisor
-and OS kernel insight into application memory access patterns, to support page
-eviciton algorithms.
+our goals. The \textit{present} (P) flag is set to 0 to indicate pages that
+have been evicted from RAM to a cheaper and slower storage medium. When address
+translation encounters a page table entry where P is 0, the CPU generates a
+page fault (\#PF), and the OS kernel is responsible for loading the page back
+into RAM and resuming execution. If an extended page table (EPT) entry has the
+P flag set 0, the CPU performs a VM exit, and the hypervisor has an opportunity
+to bring the page into RAM. The \textit{accessed} (A) flag is set to 1 by the
+CPU whenever the address translation machinery reads a page table entry, and
+the \textit{dirty} (D) flag is set to 1 by the CPU when an entry is accessed by
+a memory write operation. The A and D flags give the hypervisor and OS kernel
+insight into application memory access patterns, providing the input for the
+algorithms that select which pages get be evicted from RAM.
+
+Page table entries have flags that provide access control, in addition to the
+flags supporting page swapping. The interesting flags are the \textit{writable}
+(W) flag, which can be set to 0 to prohibit\footnote{Writes to non-writable
+pages result in general protection faults (\#GP).} memory writes to a page, and
+the \textit{disable execution} (XD) flag, which can be set to 0 to prevent
+instruction fetches from a page.
 
 Address translation applies to the software running in an SGX enclave
 (isolated environment). This means that both the OS kernel and the hypervisor
 have an impact over the mapping of virtual addresses to physical addresses, and
-either of them can take advantage of page faults and the A and D flags in page
-table entries to obtain the SGX application's memory access pattern, at page
-granularity.
+either of them can take advantage of the features above to obtain the SGX
+application's memory access pattern, at page granularity, as detailed in
+\S \ref{sec:sgx_leaks}.
 
 
 \subsection{CPU Caches}
@@ -155,10 +163,6 @@ processors. This section describes the aspects that we rely on.
 \cite{smith1982cache}, \cite{patterson2013architecture} and
 \cite{hennessy2012architecture} all provide good backgrounds on low-level cache
 implementation concepts.
-
-To remain future-proof, the loader uses the CPUID instruction
-\cite{intel2013manual} to query the CPU's cache layout and aborts when faced
-with an implementation that doesn't match our design assumptions.
 
 The \textit{cache line} is the atomic unit of data transfer between the caches
 and the main memory. The cache line size is always a power of two. Assuming
@@ -190,16 +194,15 @@ would introduce additional complexity in a design, its large size (30MB on
 high-end CPUs, compared to 256KB of per-core L2 cache) would make "taming" this
 last level of cache memory very attractive.
 
-When paging is enabled, translating the virtual memory addresses used by
-software into physical memory addresses requires as many as 4 memory accesses,
-for 64-bit software, or even 8 memory accesses in VMX non-root mode when
-extended page tables (EPT) are in use. The CPU caches address translations in a
-TLB (translation look-aside buffer). To make L1 caches as fast as possible, set
-lookup does not depend on TLB lookup, so the set index in an L1 cache can only
-use the address bits that are not impacted by address translation. Given a page
-size $P = 2^{p}$ bytes, this means that $l + s \le p$. In the x86 architecture
-$p = 12$, and all recent processors have 64-byte cache lines ($l = 6$) and
-64 sets ($s = 6$).
+Address translation (described in \S \ref{sec:caching}) requires 4 memory
+accesses for a 64-bit bare-metal kernel, and 8 memory accesses when a
+hypervisor is present. To achieve high clock speeds, the CPU caches address
+translations in a TLB (translation look-aside buffer). To make L1 caches as
+fast as possible, set lookup does not depend on TLB lookup, so the set index in
+an L1 cache can only use the address bits that are not impacted by address
+translation. Given a page size $P = 2^{p}$ bytes, this means that
+$l + s \le p$. In the x86 architecture $p = 12$, and all recent processors have
+64-byte cache lines ($l = 6$) and 64 sets ($s = 6$).
 
 The L2 cache in recent Intel processors is known to use physical indexing
 \cite{patterson2013architecture}. The indexing method is not documented in
@@ -208,4 +211,3 @@ considered to be an implementation detail. However, the indexing mehtod
 determines the set index for a given memory location, and knowing which memory
 addresses are stored in the same set is crucial for mounting and defending
 against cache timing attacks.
-

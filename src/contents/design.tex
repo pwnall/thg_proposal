@@ -25,4 +25,8 @@ policy. The data owner must only trust our TCB, and the software provider can
 iterate faster and rely on our verifier and memory manager to protect from
 bugs that would result in private data leaks.
 
+To remain future-proof, the loader uses the CPUID instruction
+\cite{intel2013manual} to query the CPU's cache layout and aborts when faced
+with an implementation that doesn't match our design assumptions.
+
 

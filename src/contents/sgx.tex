@@ -79,7 +79,8 @@ memory access trace for a program running inside an enclave, simply by making
 sure that only one page is present at any given time.
 
 
-\subsection{SGX Limitations}
+\subsection{SGX Information Leaks}
+\label{sec:sgx_leaks}
 
 \subsubsection{Hyperthreading Leaks}
 
@@ -102,37 +103,61 @@ to start, before any protected computation is performed. However, a malicious
 kernel or hypervisor can de-schedule the other threads after the main thread
 performed the spinlock check, so this technique cannot be used reliably.
 
-\subsubsection{Page-Level Memory Accesss}
+\subsubsection{Page-Level Memory Access Leaks}
 
+While executing the code inside an enclave, the CPU still follows the standard
+page translation process (\S \ref{sec:paging}), including setting the A and D
+bits and delivering page faults. A malicious OS kernel or hypervisor can
+obtain the page-level trace of an application executing inside an enclave by
+setting the P flag to 0 on all the enclave's pages before starting enclave
+execution, and then maintaining exactly one instruction page and one data page
+present in the enclave's address space.
 
+When a page fault is generated, CR2 contains the virtual address of a page
+accessed by enclave, and the error code indicates whether the memory access was
+a read or a write (bit 1) and whether the memory access is a data access or
+an instruction fetch access (bit 4). On a data access, the kernel tracing the
+enclave code's memory access pattern would set the P flag of the desired page
+to 1, and set the P flag of the previously accessed data page to 0. Instruction
+accesses can be handled in a similar manner. For a slightly more detailed
+trace, the kernel can set a desired page's W flag to 0 if the page fault's
+error code indicates a read access, and only set it to 1 for write accesses.
 
+Leaving an enclave via an AEX and re-entering the enclave via \texttt{ERESUME}
+causes the CPU to flush TLB entries that contain enclave addresses, so a
+tracing kernel would not need to worry about flushing the TLB. The tracing
+kernel does not need to flush the caches either, because the CPU needs to
+perform address translation even for cached data.
 
+\subsubsection{Fine-Grained Memory Access Leaks}
 
-There are many other channels that leak memory access information.
+The AEX process and the \texttt{ERESUME} instructions do not flush the CPU
+caches. A tracing kernel can take advantage of cache timing to narrow down
+the addresses in an application's memory access trace to cache line
+granularity, by extending the method described above with the steps below.
 
-\begin{itemize}
+The tracing kernel controls the mapping between virtual addresses and physical
+addresses, so it can make sure that its own code and data use different sets
+in the L2 cache from the enclave's code and data. For example, in a typical
+256kb (per-core) L2 cache organized as 512 8-way sets of 64-byte lines, the
+tracing kernel could allocate lines 0-63 for the enclave's code page, lines
+64-127 for the enclave's data page, and use lines 128-511 for its own pages.
 
-\item Enclave mode sets the accessed and dirty bits appropriately on all levels
-      of the paging structures involved in address translation, exposing access
-      information to both the OS and the VMM.
+Right before entering an enclave via \texttt{EENTER} or \texttt{ERESUME}, the
+kernel would issue \texttt{CLFLUSH} instructions to flush the enclave's code
+page and data page from the cache. The enclave could have accessed a single
+code page and a single data pages, so flushing the cache should be reasonably
+efficient. The tracing kernel then uses 16 bogus pages (8 for the enclave's
+code page, and 8 for the enclave's data page) to load all the 8 ways in the 128
+cache sets allocated by enclave pages. After an AEX gives control back to the
+tracing kernel, it can read the 16 bogus pages, and exploit the time difference
+between an L2 cache hit and a miss to see which cache lines were evicted and
+replaced by the enclave's memory accesses.
 
-\item Interrupts that cause an asynchronous exit (AEX) from enclave mode flush
-      the processor's TLB, but leave the cache contents intact, so the OS or
-      VMM can probe the cache to see which lines were replaced by the enclave
-      software, which reveals information about the software's memory access
-      patterns.
+\subsubsection{Leaks via Physical Attacks}
 
-\item Returning into enclave mode from an AEX via the ERESUME instruction
-      flushes the TLB, so the OS and VMM can get information about the enclave
-      software's memory accesses even if the targeted memory is still cached,
-      by marking the appropriate page table and/or page directory entries
-      \textit{not present}.
-
-\item The PRM can be set up by the BIOS as write-back (WB) or uncacheable (UC)
-      memory. If the PRM is set as uncacheable, an adversary with physical
-      access and the tools to tap the system bus can see the enclave program's
-      memory accesses, possibly at word granularity.
-
-\end{itemize}
-
+The PRM can be set up by the BIOS as write-back (WB) or uncacheable (UC)
+memory. If the PRM is set as uncacheable, an adversary with physical
+access and the tools to tap the system bus can see the enclave program's
+memory accesses, possibly at word granularity.
 
