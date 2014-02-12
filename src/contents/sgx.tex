@@ -124,9 +124,15 @@ a read or a write (bit 1) and whether the memory access is a data access or
 an instruction fetch access (bit 4). On a data access, the kernel tracing the
 enclave code's memory access pattern would set the P flag of the desired page
 to 1, and set the P flag of the previously accessed data page to 0. Instruction
-accesses can be handled in a similar manner. For a slightly more detailed
-trace, the kernel can set a desired page's W flag to 0 if the page fault's
-error code indicates a read access, and only set it to 1 for write accesses.
+accesses can be handled in a similar manner.
+
+For a slightly more detailed trace, the kernel can set a desired page's W flag
+to 0 if the page fault's error code indicates a read access, and only set it to
+1 for write accesses. Also, applications that use a page as both code and data
+(self-modifying code and just-in-time compiling VMs) can be handled by setting
+a page's XD flag to 0 for a data access, and by carefully accounting for the
+case where the last accessed data page is the same as the last accessed code
+page.
 
 Leaving an enclave via an AEX and re-entering the enclave via \texttt{ERESUME}
 causes the CPU to flush TLB entries that contain enclave addresses, so a
@@ -134,7 +140,10 @@ tracing kernel would not need to worry about flushing the TLB. The tracing
 kernel does not need to flush the caches either, because the CPU needs to
 perform address translation even for cached data.
 
-
+An easy way to reduce this attack's power is to increase the page size, so the
+trace contains less information. However, the attack cannot be completely
+prevented without removing the kernel's ability to oversubscribe the EPC,
+which is a major benefit of paging.
 
 \subsubsection{Fine-Grained Memory Access Leaks}
 
@@ -163,10 +172,20 @@ replaced by the enclave's memory accesses.
 
 \subsubsection{Leaks via Physical Attacks}
 
-The methods above are restricted to software attacks.
+The methods described above rely on a compormised hypervisor or OS kernel, but
+not on physical attacks. If an attacker can tap into the memory bus and read
+the address lines, the attacker can learn the enclave code's memory access
+patterns, at a fine granularity.
 
-The PRM can be set up by the BIOS as write-back (WB) or uncacheable (UC)
-memory. If the PRM is set as uncacheable, an adversary with physical
-access and the tools to tap the system bus can see the enclave program's
-memory accesses, possibly at word granularity.
+The processor reserved memory (PRM) is configured by the BIOS at boot time as
+a continuous memory area, and can be configured as write-back (WB) or
+uncacheable (UC) memory. If the PRM is uncacheable, the CPU will generate a
+memory transaction for every memory access. The granularity of the memory
+transactions depends on the encryption engine used for the EPC, which is not
+documented in \cite{intel2013sgxmanual}. If 128-bit AES is used, memory tapping
+would yield addresses at 16-byte granularity, which means two 64-bit words.
 
+At the same time, configuring the PRM as uncacheable memory removes the cache
+timing attack documented above, at the cost of dramatically slowing down the
+execution of SGX code. In this case, the CPU would still leak memory access
+patterns at page granularity, due to the address translation engine.
