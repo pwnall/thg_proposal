@@ -11,12 +11,13 @@ provider, in encrypted form.
 We aim to build a system that can prevent malicious software from colluding
 with either malicious infrastructure, or with another piece of malicious
 software running on the same infrastructure, for the purpose of leaking private
-data that is not included in the computation result. Our trusted computing base
-(TCB) includes the computer's main processor (CPU), and a
-\textit{software loader} that verifies and launches the untrusted software.
-We rely on a processor's ability to create a secure execution environment that
-is isolated from the system software. Our TCB does not include the operating
-system or any high-level software that runs on the infrastructure.
+data that is not included in the computation result. We rely on a processor's
+ability to create a protected execution environment that is isolated from the
+system software. Our trusted computing base (TCB) includes the computer's main
+processor (CPU), and a \textit{trusted runtime} that verifies and launches the
+untrusted software, and mediates its interactions with the software outside the
+protected environment. Our TCB does not include the operating system or any
+high-level software that runs on the infrastructure.
 
 The main application that we are targeting is enabling heavily regulated
 fields, such as the medical and financial industries, to use public clouds and
@@ -31,6 +32,6 @@ Software Guard Extensions (SGX), and find that it leaks private data by
 exposing the software's memory access patterns to other programs sharing the
 infrastructure and to the infrastructure's owners. We aim to find a minimal set
 of changes to the SGX proposal that would make it not reveal memory access
-patterns, when used in conjunction with our software loader.
+patterns, when used in conjunction with our trusted runtime.
 
 \end{abstract}
