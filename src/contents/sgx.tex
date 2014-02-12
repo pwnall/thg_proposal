@@ -82,6 +82,11 @@ sure that only one page is present at any given time.
 \subsection{SGX Information Leaks}
 \label{sec:sgx_leaks}
 
+Software Guard Extensions, as documented in \cite{intel2013sgxmanual}, does not
+provide full privacy guarantees to the code executing inside an enclave. We
+present methods that an attacker can use to extract information from an
+enclave.
+
 \subsubsection{Hyperthreading Leaks}
 
 Modern Intel CPUs feature hyper-threading, which means that each core has two
@@ -129,6 +134,8 @@ tracing kernel would not need to worry about flushing the TLB. The tracing
 kernel does not need to flush the caches either, because the CPU needs to
 perform address translation even for cached data.
 
+
+
 \subsubsection{Fine-Grained Memory Access Leaks}
 
 The AEX process and the \texttt{ERESUME} instructions do not flush the CPU
@@ -155,6 +162,8 @@ between an L2 cache hit and a miss to see which cache lines were evicted and
 replaced by the enclave's memory accesses.
 
 \subsubsection{Leaks via Physical Attacks}
+
+The methods above are restricted to software attacks.
 
 The PRM can be set up by the BIOS as write-back (WB) or uncacheable (UC)
 memory. If the PRM is set as uncacheable, an adversary with physical
