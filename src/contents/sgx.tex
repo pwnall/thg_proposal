@@ -87,17 +87,27 @@ provide full privacy guarantees to the code executing inside an enclave. We
 present methods that an attacker can use to extract information from an
 enclave.
 
-\subsubsection{Hyperthreading Leaks}
+\subsubsection{Hyper-Threading Leaks}
 
 Modern Intel CPUs feature hyper-threading, which means that each core has two
-(or more) fetch and decode units that are presented as separate logical
-processors running separate threads. The threads share the other core
-resources, such as execution units and L1 and L2 caches. SGX does not prevent
-hyper-threading, so a malicious OS kernel or hypervisor can schedule a thread
-executing enclave code and a snooping thread on logical processors on same
-core. The snooping thread can use the processor's high-performance counter
+(or more) sets of register files and local APICs, presented as logical
+processors running separate threads (see Figure \ref{fig:cpu_core}). The
+threads share the other core resources, such as the fetch and decode units,
+execution units and L1 and L2 caches. SGX does not prevent hyper-threading, so
+a malicious OS kernel or hypervisor can schedule a thread executing enclave
+code and a snooping thread on logical processors on same core. The snooping
+thread can use the processor's high-performance counter
 \cite{petters1999making} to get information about the instructions and memory
 access patterns of the thread executing enclave code.
+
+\begin{figure}[hbtp]
+  \center{\includegraphics[width=85mm]{figures/cpu_core.pdf}}
+  \caption{
+    CPU core with two logical processors. Each logical processor has its own
+    APIC and execution state, and they share all the other core resources.
+  }
+  \label{fig:cpu_core}
+\end{figure}
 
 A promising approach for preventing against hyper-threading leaks is to
 effectively disable hyper-threading, by using \texttt{CPUID} to find out the

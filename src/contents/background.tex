@@ -18,9 +18,19 @@ that the program is working on.
 In an Infrastructure-as-a-Service (IaaS) cloud environment, such as Amazon EC2,
 commodity CPUs run software at four different privilege levels: System
 Management Mode (SMM), VMX root mode (also described as ring -1), kernel mode
-(ring 0) and user mode (ring 3). This section outlines the consequences of a
-successfully exploited vulnerability at each privilege level, and sets the
-stage for analyzing the SGX protection model.
+(ring 0) and user mode (ring 3), as shown in Figure \ref{fig:cpu_rings}. This
+section outlines the consequences of a successfully exploited vulnerability at
+each privilege level, and sets the stage for analyzing the SGX protection
+model.
+
+\begin{figure}[hbtp]
+  \center{\includegraphics[width=50mm]{figures/cpu_rings.pdf}}
+  \caption{
+    The privilege leves in the x86 architecture, and the software that
+    typically runs at each security level.
+  }
+  \label{fig:cpu_rings}
+\end{figure}
 
 SMM is intended for use by the motherboard manufacturers to implement features
 such as fan control and deep sleep, and/or to emulate missing hardware. SMM
@@ -93,15 +103,25 @@ address translation.
 Intel programming manual \cite{intel2013manual}, which translates 48-bit
 \textit{virtual addresses} into \textit{physical addresses} of at most 52
 bits\footnote{The size of a physical address is CPU-dependent, and is 40 bits
-for recent desktop CPUs and 44 bits for recent high-end server CPUs.}. The
-bottom 12 bits of a virtual address are not changed by the translation. The top
-36 bits are grouped into four 9-bit indexes used to navigate a data structure
-called \textit{the page tables}. Despite its name, the data structure closely
+for recent desktop CPUs and 44 bits for recent high-end server CPUs.}. Figure
+\ref{fig:os_paging} illustrates the address translation process. The bottom 12
+bits of a virtual address are not changed by the translation. The top 36 bits
+are grouped into four 9-bit indexes used to navigate a data structure called
+\textit{the page tables}. Despite its name, the data structure closely
 resembles a perfectly balanced 512-ary search tree where the nodes do not store
 keys. Each node is an array of 512 8-byte entries that contain the physical
 addresses of the next-level children as well as some flags. The address of the
 root node is stored in the CR3 register. The arrays in the last-level nodes
 contain the physical addresses that are the result of the address translation.
+
+\begin{figure}[hbtp]
+  \center{\includegraphics[width=85mm]{figures/os_paging.pdf}}
+  \caption{
+    IA-32e address translation takes in a 48-bit virtual address and outputs
+    a 52-bit physical address.
+  }
+  \label{fig:os_paging}
+\end{figure}
 
 Hardware virtualization (used in cloud computing) allows a hypervisor to run
 multiple operating systems concurrently using the same physical memory, by
