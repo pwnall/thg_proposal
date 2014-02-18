@@ -129,8 +129,19 @@ adding another layer of address translation. When extended page tables (EPT)
 are enabled, the process above is used to translate from a virtual address into
 a \textit{guest-physical address}. The translation from guest-physical
 addresses to actual physical addresses uses the same process as above, except
-the physical address of the root node is stored in a virtual machine control
-structure.
+the physical address of the root node is stored in the extended page table
+pointer (EPTP) field in the VM's control structure (VMCS). Figure
+\ref{fig:vmx_paging} illustrates the address translation process in the
+presence of hardware virtualization.
+
+\begin{figure}[hbtp]
+  \center{\includegraphics[width=85mm]{figures/vmx_paging.pdf}}
+  \caption{
+    Address translation when hardware virtualization is enabled. A translation
+    requires up to 8 memory accesses.
+  }
+  \label{fig:vmx_paging}
+\end{figure}
 
 Each entry in the page tables has some boolean flags, in addition to the
 pointer to the next level. The following flags are particularly interesting for
