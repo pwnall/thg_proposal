@@ -203,17 +203,31 @@ $n - l$ bits determine the cache line that is used to store the data at the
 memory location. All recent processors have 64-byte cache lines.
 
 The L1 and L2 caches in recent processors are multi-way set-associative with
-direct set indexing. An $w$-way set-associative cache has its memory divided
-into \textit{sets}, where each set has $w$ lines. A memory location can be
-cached in any of the $w$ lines in a specific set that is determined by the
-highest $n - l$ bits of the location's memory address. Direct set indexing
-means that the $S$ sets in a cache are indexed from $0$ to $S - 1$, and a
-memory location is cached in the set with index
-$address_{n - 1 \ldots n - l} \bmod S$. In the common case where the number of
-sets in a cache is a power of two, so $S = 2^{s}$, the lowest $l$ bits in an
-address make up the cache line offset, the next $s$ bits are the set index.
-The highest $n - s - l$ bits in an address are not used when selecting where a
-memory location will be cached.
+direct set indexing, as shown in Figure \ref{fig:cpu_cache}. An $W$-way
+set-associative cache has its memory divided into \textit{sets}, where each set
+has $W$ lines. A memory location can be cached in any of the $w$ lines in a
+specific set that is determined by the highest $n - l$ bits of the location's
+memory address. Direct set indexing means that the $S$ sets in a cache are
+indexed from $0$ to $S - 1$, and a memory location is cached in the set with
+index $address_{n - 1 \ldots n - l} \bmod S$. In the common case where the
+number of sets in a cache is a power of two, so $S = 2^{s}$, the lowest $l$
+bits in an address make up the cache line offset, the next $s$ bits are the set
+index. The highest $n - s - l$ bits in an address are not used when selecting
+where a memory location will be cached. Figure \ref{fig:cpu_cache} shows the
+cache structure and lookup process.
+
+\begin{figure}[hbtp]
+  \center{\includegraphics[width=85mm]{figures/cpu_cache.pdf}}
+  \caption{
+    Cache organization and lookup, for a $W$-way set-associative cache with
+    $2^{l}$-byte lines and $S = 2^{s}$ sets. The cache works with $n$-bit
+    memory addresses. The lowest $l$ address bits point to a specific byte in a
+    cache line, the next $s$ bytes index the set, and the highest $n - s - l$
+    bits are used to decide if the desired address is in one of the $W$ lines
+    in the indexed set.
+  }
+  \label{fig:cpu_cache}
+\end{figure}
 
 According to the CPUID instruction results and the Intel programming manuals
 \cite{intel2013manual}, the L3 cache of recent processors does not use direct
@@ -230,10 +244,23 @@ accesses for a 64-bit bare-metal kernel, and 8 memory accesses when a
 hypervisor is present. To achieve high clock speeds, the CPU caches address
 translations in a TLB (translation look-aside buffer). To make L1 caches as
 fast as possible, set lookup does not depend on TLB lookup, so the set index in
-an L1 cache can only use the address bits that are not impacted by address
-translation. Given a page size $P = 2^{p}$ bytes, this means that
+an L1 cache only uses the address bits that are not impacted by address
+translation. Given a page size $P = 2^{p}$ bytes, this is equivalent to
 $l + s \le p$. In the x86 architecture $p = 12$, and all recent processors have
-64-byte cache lines ($l = 6$) and 64 sets ($s = 6$).
+64-byte cache lines ($l = 6$) and 64 sets ($s = 6$), as shown in Figure
+\ref{fig:caching_and_paging}.
+
+\begin{figure}[hbtp]
+  \center{\includegraphics[width=85mm]{figures/caching_and_paging.pdf}}
+  \caption{
+    Virtual addresses from the perspective of cache lookup and address
+    translation. The bits used for the L1 set index and line offset are not
+    changed by address translation, so the page tables do not impact L1 cache
+    placement. Page tables do impact L2 and L3 cache placement. However, using
+    2MB pages would make cache placement independent of page tables.
+  }
+  \label{fig:caching_and_paging}
+\end{figure}
 
 The L2 cache in recent Intel processors is known to use physical indexing
 \cite{patterson2013architecture}. The indexing method is not documented in
