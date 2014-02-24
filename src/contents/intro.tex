@@ -9,6 +9,18 @@ data. This raises the problem that the data owner must trust both the owner
 of the computing infrastructure and the software supplier to handle the data
 according to some privacy policy.
 
+\begin{figure}[hbtp]
+  \center{\includegraphics[width=75mm]{figures/computing_model.pdf}}
+  \caption{
+    The computing model assumed by our system. The infrastructure owner,
+    software provider and data owner mutually distrust each other. Our system
+    aims to guarantee that the private data will not leak even if the software
+    is malicious and cooperates with a malicious infrastructure, or with
+    another malicious piece of software running on the infrastructure.
+  }
+  \label{fig:computing_model}
+\end{figure}
+
 \subsection{Motivation}
 \label{sec:motivation}
 
@@ -32,7 +44,7 @@ ones listed above, rely on the fact that that players can only access a subset
 of the game state that is dictated by the units they control. To compensate for
 network latencies, many games entrust a player's game client with a superset
 of the game state that the user should have access to. For example, in
-StarCraft, the game client code running on the players' computers "knows" the
+StarCraft, the game client code running on the players' computers ``knows'' the
 entire state, and is trusted to hide the information that the player should not
 have access to \cite{hardy2009cheating}. The other games metioned above also
 store information that the player shouldn't access in the game clients, leading
@@ -50,10 +62,10 @@ infrastructure may be malicious, and may cooperate with one or more malicious
 pieces of software running on the infrastructure, including the software that
 performs computations on the private data that must be protected. The
 infrastructure owner may also mount a physical attack by attaching a device to
-one of the computer's buses, such as the DDR3 bus used for DRAM accesses, or to
-any other bus. We consider physical attacks to be significantly more expensive
-to carry out than software attacks, and we treat them separately where it makes
-sense to do so.
+one of the computer's buses, such as the DDR3 bus used for DRAM accesses, or
+the PCI express bus. We consider physical attacks to be significantly more
+expensive to carry out than software attacks, and we treat them separately
+where it makes sense to do so.
 
 The threat model accurately represents a public cloud. Attackers can rent
 resources and run malicious software, as well as run experiments to reveal and

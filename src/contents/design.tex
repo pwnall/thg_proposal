@@ -20,7 +20,7 @@ protected container was set up correctly, and that the untrusted software
 only interacts with the outside world through the runtime. For example, all
 the software's memory access instructions must be replaced by calls into our
 runtime's memory manager, which that implements an oblivious RAM (ORAM)
-protocol \cite{stefanov2012path} that hides the software's memory access
+protocol \cite{stefanov2013path} that hides the software's memory access
 patterns.
 
 SGX has an attestation mechanism that uses a signature of the enclave's initial
@@ -41,6 +41,21 @@ The memory manager partitions the sets of the L2 cache into scratchpad sets and
 real memory sets. The untrusted software's code and data must only occupy
 addresses that map to the real memory sets. The protected environment must also
 have a memory area that maps to the scratchpad sets.
+
+\begin{figure}[hbtp]
+  \center{\includegraphics[width=85mm]{figures/cache_partitions.pdf}}
+  \caption{
+    Cache partitioning between two applications. Each application has some
+    cache sets allocated to it, and only uses RAM regions that map to its cache
+    sets. When partitioning the L1 cache, applications have to follow this
+    constraint themselves. When the L2 cache is partitioned, the OS can map the
+    pages in an application's virtual address space to the RAM regions that the
+    application can use, so applications are oblivious to the cache
+    partitioning.
+  }
+  \label{fig:cache_partitions}
+\end{figure}
+
 
 The scratchpad is used like a cache for the untrusted software's data. The
 memory manager provides functions for reading and writing a memory location.
@@ -79,7 +94,7 @@ The main constraint in our system is that untrusted software cannot contain
 memory access instructions. All memory accesses must be performed by calling
 into our memory manager. The software must also call into our memory manager
 at the beginning of every basic block. Long basic blocks must call into our
-runtime every 100\footnote{Subject to tweaking} instructions.
+runtime every 100 instructions\footnote{Exact number subject to tweaking}.
 
 Our runtime hides the untrusted software's actual running time, to remove
 information leak. Instead, the software's metadata specifies a deadline.

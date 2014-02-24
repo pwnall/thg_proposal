@@ -2,10 +2,10 @@
 
 We set out to design a system for performing trusted computation on mainstream
 desktop and server-class computers. Our system has three mutually distrusting
-parties: \textit{a data provider} has some private information, and allows
+parties: \textit{a data owner} has some private information, and allows
 \textit{a software provider} to perform some computation on the private data,
 using hardware resources provided by \textit{an infrastructure owner}. The
-computation result is communicated to either the data provider or the software
+computation result is communicated to either the data owner or to the software
 provider, in encrypted form.
 
 We aim to build a system that can prevent malicious software from colluding
@@ -23,8 +23,8 @@ The main application that we are targeting is enabling heavily regulated
 fields, such as the medical and financial industries, to use public clouds and
 software as a service (SaaS). While legal consequences make it unlikely that a
 public infrastructure or SaaS provider will deliberately act in a malicious
-manner, our threat model covers against skilled attackers who can exploit bugs
-in both the infrastructure and the software that performs computation over the
+manner, our threat model accounts for skilled attackers who can exploit bugs in
+both the infrastructure and the software that performs computation over the
 private data.
 
 We have analyzed Intel's most recent proposal for achieving trusted computing,

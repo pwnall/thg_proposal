@@ -13,20 +13,20 @@ for a deeper understanding of SGX.
 \label{sec:sgx_overview}
 
 SGX introduces a protected execution environment, called an \textit{enclave}.
-An enclave can's code and data are protected by placing them inside the Enclave
+An enclave's code and data are protected by placing them inside the Enclave
 Page Cache (EPC), which is a subset of the Processor Reserved Memory (PRM)
-area. The EPC is split in 4KB pages pages. Each page is associated with an
-enclave. EPC page memory accesses coming from code outside the EPC page's
-enclave are blocked by the CPU. This access check covers all privilege levels,
-including SMM. The memory controller inside the CPU blocks any DMA access to
-PRM, so EPC pages cannot be accessed by hardware via DMA.
+area. The EPC is split in 4KB pages. Each page is associated with an enclave.
+EPC page memory accesses coming from code outside the EPC page's enclave are
+blocked by the CPU. This access check covers all privilege levels, including
+SMM. The memory controller inside the CPU blocks any DMA access to PRM, so EPC
+pages cannot be accessed by hardware via DMA.
 
 The EPC contents is encrypted\footnote{Actually, the SGX manual carefully
-tiptoes around this issue by saying "On implementations in which EPC is part of
-system DRAM, the contents of the EPC are protected by an encryption engine."}
-as it leaves the CPU, to prevent against bus tapping attacks. Although the data
-is encrypted, the memory addresses are not protected, exposing the enclave
-code's memory access patterns.
+tiptoes around this issue by saying ``On implementations in which EPC is part
+of system DRAM, the contents of the EPC are protected by an encryption
+engine.''} as it leaves the CPU, to prevent against bus tapping attacks.
+Although the data is encrypted, the memory addresses are not protected,
+exposing the enclave code's memory access patterns.
 
 Execution flow can only enter an enclave via special CPU instructions
 (\texttt{EENTER}, \texttt{ERESUME}, \texttt{EEXIT}), which are similar to the
@@ -116,7 +116,7 @@ schedule threads in the same enclave on all the logical processors. This could
 be implemented by having the main thread spinlock waiting for the other threads
 to start, before any protected computation is performed. However, a malicious
 kernel or hypervisor can de-schedule the other threads after the main thread
-performed the spinlock check, so this technique cannot be used reliably.
+performed the spinlock check, so this defense is not reliable.
 
 \subsubsection{Page-Level Memory Access Leaks}
 
@@ -182,7 +182,7 @@ replaced by the enclave's memory accesses.
 
 \subsubsection{Leaks via Physical Attacks}
 
-The methods described above rely on a compormised hypervisor or OS kernel, but
+The methods described above rely on a compromised hypervisor or OS kernel, but
 not on physical attacks. If an attacker can tap into the memory bus and read
 the address lines, the attacker can learn the enclave code's memory access
 patterns, at a fine granularity.
