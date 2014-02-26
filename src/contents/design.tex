@@ -31,6 +31,7 @@ the private data is not in the TCB.
 
 
 \subsection{The Memory Manager}
+\label{sec:memory_manager}
 
 The memory manager sets up the L2 cache as a trusted scratchpad. We target the
 L2 cache because we trust all the components on the CPU die, and the L2 cache
@@ -78,6 +79,7 @@ with an implementation that doesn't match our design assumptions.
 
 
 \subsection{The Loader and Verifier}
+\label{sec:loader_verifier}
 
 We follow the approach of Google Native Client \cite{yee2009native}
 \cite{sehr2010adapting}, namely we require that the untrusted software
@@ -106,6 +108,7 @@ above terminate the untrusted software if its deadline has passed.
 
 
 \subsection{The Protected Environment}
+\label{sec:protected_environment}
 
 SGX offers a protected environment for security-sensitive software, but the
 environment leaks the memory access patterns (\S \ref{sec:sgx_leaks}). The

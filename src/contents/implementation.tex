@@ -1,0 +1,40 @@
+\section{Implementation Plan}
+\label{sec:implementation}
+
+We will implement the Memory Manager and the Loader and Verifier described in
+\S \ref{sec:design}, in order to assess their performance impact and the amount
+of code required in the TCB. Our prototype will not have the security
+properties required by our threat model, due to missing hardware support.
+
+Concretely, we will build the following components:
+
+\begin{itemize}
+
+\item A \textit{Loader} (\S \ref{sec:loader_verifier}) that sets up a process
+      to become a host for a Protected Environment
+      (\S \ref{sec:protected_environment}).
+
+\item A \textit{Verifier} (\S \ref{sec:loader_verifier}) that checks whether a
+      piece of untrusted code meets our requirements for being executed inside
+      a Protected Environment. We will look into the Native Client and RockSalt
+      codebases, and choose one as a starting point.
+
+\item A \textit{Compiler} that outputs code meeting the requirements of our
+      verifier. We will use the LLVM \cite{lattner2004llvm} compiler
+      infrastructure and plug into its code generation process.
+
+\item A \textit{Memory Manager} (\S \ref{sec:memory_manager}) that effectively
+      implements software cache management. The code will be generic enough to
+      allow us to target the L1, L2, or L3 cache, and measure the performance
+      impact of using either as a scratchpad.
+
+\item \textit{Runtime Glue} that connects the Loader, Verifier and Memory
+      Manager into a Trusted Runtime that runs untrusted code and allows it to
+      communicate with the outside world.
+
+\end{itemize}
+
+The components are mostly independent of each other, and can be developed in
+any sequence. Based on similar previous efforts, we estimate that the Verifier,
+Compiler and Memory Manager will each take about a semester (4 months) to be
+developed, and the Loader and Runtime Glue will take another semester.
