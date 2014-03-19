@@ -156,7 +156,7 @@ CPU whenever the address translation machinery reads a page table entry, and
 the \textit{dirty} (D) flag is set to 1 by the CPU when an entry is accessed by
 a memory write operation. The A and D flags give the hypervisor and OS kernel
 insight into application memory access patterns, providing the input for the
-algorithms that select which pages get be evicted from RAM.
+algorithms that select which pages get to be evicted from RAM.
 
 Page table entries have flags that provide access control, in addition to the
 flags supporting page swapping. The interesting flags are the \textit{writable}
@@ -203,7 +203,7 @@ $n - l$ bits determine the cache line that is used to store the data at the
 memory location. All recent processors have 64-byte cache lines.
 
 The L1 and L2 caches in recent processors are multi-way set-associative with
-direct set indexing, as shown in Figure \ref{fig:cpu_cache}. An $W$-way
+direct set indexing, as shown in Figure \ref{fig:cpu_cache}. A $W$-way
 set-associative cache has its memory divided into \textit{sets}, where each set
 has $W$ lines. A memory location can be cached in any of the $w$ lines in a
 specific set that is determined by the highest $n - l$ bits of the location's

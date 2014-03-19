@@ -172,7 +172,7 @@ tracing kernel could allocate lines 0-63 for the enclave's code page, lines
 Right before entering an enclave via \texttt{EENTER} or \texttt{ERESUME}, the
 kernel would issue \texttt{CLFLUSH} instructions to flush the enclave's code
 page and data page from the cache. The enclave could have accessed a single
-code page and a single data pages, so flushing the cache should be reasonably
+code page and a single data page, so flushing the cache should be reasonably
 efficient. The tracing kernel then uses 16 bogus pages (8 for the enclave's
 code page, and 8 for the enclave's data page) to load all the 8 ways in the 128
 cache sets allocated by enclave pages. After an AEX gives control back to the

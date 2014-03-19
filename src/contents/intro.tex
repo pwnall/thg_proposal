@@ -60,12 +60,12 @@ computations, potentially using software from different mutually distrusting
 providers. The operating system and high-level software used to manage the
 infrastructure may be malicious, and may cooperate with one or more malicious
 pieces of software running on the infrastructure, including the software that
-performs computations on the private data that must be protected. The
-infrastructure owner may also mount a physical attack by attaching a device to
-one of the computer's buses, such as the DDR3 bus used for DRAM accesses, or
-the PCI express bus. We consider physical attacks to be significantly more
-expensive to carry out than software attacks, and we treat them separately
-where it makes sense to do so.
+performs computations on the private data that must be protected, to accomplish
+a \textbf{software attack}. The infrastructure owner may also mount a
+\textbf{physical attack} by attaching a device to one of the computer's buses,
+such as the DDR3 bus used for DRAM accesses, or the PCI express bus. We
+consider physical attacks to be significantly more expensive to carry out than
+software attacks, and we treat them separately where it makes sense to do so.
 
 The threat model accurately represents a public cloud. Attackers can rent
 resources and run malicious software, as well as run experiments to reveal and
@@ -73,18 +73,19 @@ exploit vulnerabilities in the infrastructure software. The programs that run
 over the private data can also have vulnerabilities, which can be exploited by
 attackers. An attacker can also motivate a datacenter maintainance employee to
 attach a physical device to a server, but this attack is significantly harder
-to mount than a purely software attack. At the same time, a software attack
-that takes control of the kernel or hypervisor can be used to reflash a
-computer's BIOS \cite{wojtczuk2010bios}. On computers with Intel's Active
-Management Technology (AMT) \cite{intel2013amt}, the flash memory chip
-containing the BIOS code also contains the firmware executed by the
-Manageability Engine (ME), a service processor that is embedded in the
-Platform Controller Hub (PCH), shown in Figure \ref{fig:pch}. The ME can access
-RAM via DMA, can communicate the network, and can override the CPU's boot
-vector, causing it to boot a malicious OS kernel or hypervisor
+to mount than a purely software attack.
+
+At the same time, a software attack that takes control of the kernel or
+hypervisor can be used to reflash a computer's BIOS \cite{wojtczuk2010bios}. On
+computers with Intel's Active Management Technology (AMT) \cite{intel2013amt},
+the flash memory chip containing the BIOS code also contains the firmware
+executed by the Manageability Engine (ME), a service processor that is embedded
+in the Platform Controller Hub (PCH), shown in Figure \ref{fig:pch}. The ME can
+access RAM via DMA, can communicate using the network, and can override the
+CPU's boot vector, causing it to boot a malicious OS kernel or hypervisor
 \cite{tereshkin2009amt}. Therefore, a software attack that escalates into
 taking over the Intel ME can give the attacker powers that are traditionally
-associated with hardware attacks.
+associated with hardware attacks, and this work treats it as a physical attack.
 
 \begin{figure}[hbtp]
   \center{\includegraphics[width=65mm]{figures/pch.pdf}}
@@ -112,7 +113,7 @@ to attach hardware devices (known as \textit{mods} or \textit{modchips}) to
 computers or game consoles to be able to cheat \cite{harris2007mod}, so
 hardware attacks are even more relevant in the multiplayer game scenario.
 
-Our threat model does not cover attacks that require intimiate knowledge of the
+Our threat model does not cover attacks that require intimate knowledge of the
 processor's hardware internals. Most importantly, we do not protect against
 malicious OS-level software that can abuse a CPU's in-field microcode update
 mechanism to create a vulnerability in the processor's security features, or
@@ -192,8 +193,8 @@ access patterns by taking advantage of the L2 cache layout (see \S
 an oblivious RAM protocol \cite{stefanov2012path} to hide the cache eviction
 patterns. Unfortunately, our scheme still leaks memory access patterns under
 the currently documented SGX design, due to page faults (\S \ref{sec:paging})
-and to asynchronous enclave exits (AEX). We explore the problem of devising a
-minimal set of changes to SGX that make our scheme work. At the same time, we
-explore a scheme that can protect memory accesses under the current SGX design,
-and that is more practical than fully-homomorphic encryption
-\cite{gentry2009fhe} \cite{naehrig2011can}.
+and asynchronous enclave exits (AEX). \S \ref{sec:design} We explore the
+problem of devising a minimal set of changes to SGX that make our scheme work.
+At the same time, we explore a scheme that can protect memory accesses under
+the current SGX design, and that is more practical than fully-homomorphic
+encryption \cite{gentry2009fhe} \cite{naehrig2011can}.
