@@ -4,11 +4,15 @@
 Our system aims to offer the same integrity guarantees as SGX, but also provide
 full privacy for the code executing inside a protected container, by hiding the
 code's memory access patterns against the attacks described in \S
-\ref{sec:sgx_leaks}.
+\ref{sec:sgx_leaks}. We accomplish this by revising the protected environment
+provided by the hardware and by introducing a trusted runtime that loads and
+verifies the untrusted code that will run in the protected environment, and a
+memory management that hides the code's memory access patterns from the
+system software running outside the protected environment.
+
 
 \subsection{The Protected Environment}
 \label{sec:protected_environment}
-
 
 We rely on a protected container that is very similar to an SGX enclave. We
 pursue two avenues for designing the container. We will explore a minimal set
@@ -20,6 +24,7 @@ the solutions needed for protecting against both physical and software attacks
 against the solutions that only prevent software attacks. We expect that the
 latter will have better performance overhead, and want to understand exactly
 how the trade-off will work out.
+
 
 \subsection{The Loader and Verifier}
 \label{sec:loader_verifier}
