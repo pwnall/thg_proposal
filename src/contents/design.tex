@@ -7,23 +7,23 @@ code's memory access patterns against the attacks described in \S
 \ref{sec:sgx_leaks}. We accomplish this by revising the protected environment
 provided by the hardware and by introducing a trusted runtime that loads and
 verifies the untrusted code that will run in the protected environment, and a
-memory management that hides the code's memory access patterns from the
+memory manager that hides the code's memory access patterns from the
 system software running outside the protected environment.
 
 
 \subsection{The Protected Environment}
 \label{sec:protected_environment}
 
-We rely on a protected container that is very similar to an SGX enclave. We
+We rely on a protected container that is heavily inspired by SGX enclaves. We
 pursue two avenues for designing the container. We will explore a minimal set
-of SGX modifications that would prevent against memory access patterns leaking
-from enclave execution. We will also explore a clean-slate design that
-specifies a minimal set of additions to a RISC architecture resulting in a
-protected contained that meets our threat model. Our explorations will contrast
-the solutions needed for protecting against both physical and software attacks
-against the solutions that only prevent software attacks. We expect that the
-latter will have better performance overhead, and want to understand exactly
-how the trade-off will work out.
+of modifications to Intel's SGX that would prevent against memory access
+patterns leaking from enclave execution. We will also explore a clean-slate
+design that specifies a minimal set of additions to a RISC architecture
+resulting in a protected contained that meets our threat model. Our
+explorations will contrast the solutions needed for protecting against both
+physical and software attacks against the solutions that only prevent software
+attacks. We expect that the latter will have better performance overhead, and
+want to understand exactly how the trade-off will work out.
 
 
 \subsection{The Loader and Verifier}
@@ -48,23 +48,18 @@ can be used to prove the correctness of our verifier. The specific constraints
 that we place on software depend on whether protection against physical attacks
 is necessary or not, and we cover both cases in the sections below.
 
-SGX has an attestation mechanism that uses a signature of the enclave's initial
-contents to set up a secure communication channel between a remote user and
-the software running inside the enclave. In our system, the signature only
-covers our trusted runtime, reflecting the fact that the software computing on
-the private data is not in the TCB.
 
 \subsection{The Memory Manager}
 \label{sec:memory_manager}
 
 The x86 address translation (\S \ref{sec:paging}) gives malicious system
 software an opportunity to snoop on the enclave software, because of the
-information reported by page faults (\S \ref{sec:sgx_leaks}).
+information reported by page faults and page table flags
+(\S \ref{sec:sgx_leaks}).
 
 
 
-
-\subsection{Software Attacks}
+\subsection{Preventing Software Attacks}
 
 When physical attacks are not taken into account, the main issue of the SGX
 design is the handling of CPU faults and interrupts by Asynchronous Enclave
@@ -95,9 +90,9 @@ prohibit the untrusted software from jumping out of enclave mode (by using
 \texttt{EEXIT}) directly, and require that it calls into our runtime instead.
 We also require software to call into our runtime periodically, so the runtime
 has the opportunity to terminate it. Specifically, the software must call into
-our memory manager at the beginning of every basic block. Long basic blocks
-must call into our runtime every 100 instructions. This mechanism shall be
-tweaked as we gather experience from sample applications.
+our runtime at the beginning of every basic block. Long basic blocks must call
+into our runtime every 100 instructions. This mechanism shall be tweaked as we
+gather experience from sample applications.
 
 The requirements mentioned above are enforced by the loader and verifier. We do
 not trust the application developer or compiler to produce code that meets
@@ -109,15 +104,20 @@ manner, so the IPI mechanism described above is not necessary for software
 using our runtime, but is required as a part of a sound design for a hardware
 protected environment.
 
+If physical attacks are not an issue, the memory manager only needs to hide
+page-level memory access patterns from the system software. Our plan of
+removing AEX implies that page faults would be delivered inside the enclave, to
+our trusted runtime. The runtime would use a protocol to ask the system
+software to bring in some pages from disk, and would be responsible for
+obfuscating the untrusted software's actual access patten.
 
-\subsection{Physical Attacks}
 
-We prevent against access pattern snooping by devices attached to the
-processor's memory bus by obfuscating the memory access patterns. Our trusted
-runtime verifies that the software's memory access instructions have been
-replaced by calls into our runtime's memory manager.
+\subsection{Preventing Physical Attacks}
 
-The memory manager
+We prevent against memory access pattern snooping by devices attached to the
+processor's memory bus by obfuscating the untrusted code's access patterns. Our
+trusted runtime verifies that the software's memory access instructions have
+been replaced by calls into our runtime's memory manager. The memory manager
 implements an oblivious RAM (ORAM) protocol \cite{stefanov2013path} to hide the
 software's memory access patterns.
 
@@ -149,7 +149,7 @@ The scratchpad is used like a cache for the untrusted software's data. The
 memory manager provides functions for reading and writing a memory location.
 If the desired location is cached in the scratchpad, it is read or written
 immediately. Otherwise, a cache line is evicted from the scratchpad, and
-replaced with the line that contains the desired location. If evicted cache
+replaced with the line that contains the desired location. If the evicted cache
 line is dirty, it is written to the software's memory using an ORAM protocol.
 
 To avoid leaking information via memory access timing, the memory manager
@@ -160,21 +160,18 @@ in a loop if the queue is full. The untrusted software must also periodically
 call into our runtime, so it can run the ORAM protocol at the right time
 even if no memory accesses are pending.
 
-System software can also foil the cache partitioning scheme used by our memory
-manager, because it controls some of the bits in the physical memory addresses
-used to compute the cache set index. We are exploring mechanisms for
-constraining the mapping of an enclave page to an EPC page. The extra
-constraints would only be checked when an enclave page is created (via
+We are considering taking advantage of hyper-threading present in Intel CPUs by
+dedicating a logical processor to the ORAM protocol, and another logical
+processor to running the untrusted software.
+
+Under the current SGX design, system software can foil the cache partitioning
+scheme used by our memory manager, because it controls some of the bits in the
+physical memory addresses used to compute the cache set index. We are exploring
+mechanisms for constraining the mapping of an enclave page to an EPC page. The
+extra constraints would only be checked when an enclave page is created (via
 \texttt{EADD}) or loaded into the EPC (via \texttt{ELDB}).
 
 To remain future-proof, the memory manager uses the \texttt{CPUID} instruction
 \cite{intel2013manual} to query the CPU's cache layout and aborts when faced
 with an implementation that doesn't match our design assumptions.
 
-
-
-
-A simple approach would use one
-thread to run enclave code, and spin loop on all the other threads. We are
-also considering dedicating a logical processor to the ORAM protocol, and
-another logical processor to running the untrusted software.
