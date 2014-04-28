@@ -7,8 +7,7 @@ code's memory access patterns against the attacks described in \S
 \ref{sec:sgx_leaks}. We accomplish this by revising the protected environment
 provided by the hardware and by introducing a trusted runtime that loads and
 verifies the untrusted code that will run in the protected environment, and a
-memory manager that hides the code's memory access patterns from the
-system software running outside the protected environment.
+memory manager that obfuscates the code's memory access patterns.
 
 
 \subsection{The Protected Environment}
@@ -19,7 +18,7 @@ pursue two avenues for designing the container. We will explore a minimal set
 of modifications to Intel's SGX that would prevent against memory access
 patterns leaking from enclave execution. We will also explore a clean-slate
 design that specifies a minimal set of additions to a RISC architecture
-resulting in a protected contained that meets our threat model. Our
+resulting in a protected container that meets our threat model. Our
 explorations will contrast the solutions needed for protecting against both
 physical and software attacks against the solutions that only prevent software
 attacks. We expect that the latter will have better performance overhead, and
@@ -46,17 +45,18 @@ in a small TCB, compared to rewriting the software's machine code on the fly,
 and we expect that a technique similar to RockSalt \cite{morrisett2012rocksalt}
 can be used to prove the correctness of our verifier. The specific constraints
 that we place on software depend on whether protection against physical attacks
-is necessary or not, and we cover both cases in the sections below.
+is necessary or not, and we cover both cases in the subsections below.
 
 
 \subsection{The Memory Manager}
 \label{sec:memory_manager}
 
-The x86 address translation (\S \ref{sec:paging}) gives malicious system
-software an opportunity to snoop on the enclave software, because of the
-information reported by page faults and page table flags
-(\S \ref{sec:sgx_leaks}).
-
+We assume that the code running inside the protected environment may leak
+private information via its memory access patterns. Our trusted runtime takes
+over memory management and obfuscates the untrusted software's access patterns.
+The memory manager design is completely different depending on whether physical
+attacks are under consideration or not, and the following subsections briefly
+describe the different solutions.
 
 
 \subsection{Preventing Software Attacks}
@@ -104,12 +104,16 @@ manner, so the IPI mechanism described above is not necessary for software
 using our runtime, but is required as a part of a sound design for a hardware
 protected environment.
 
-If physical attacks are not an issue, the memory manager only needs to hide
-page-level memory access patterns from the system software. Our plan of
-removing AEX implies that page faults would be delivered inside the enclave, to
-our trusted runtime. The runtime would use a protocol to ask the system
-software to bring in some pages from disk, and would be responsible for
-obfuscating the untrusted software's actual access patten.
+The x86 address translation (\S \ref{sec:paging}) gives malicious system
+software an opportunity to snoop on the enclave software, because of the
+information reported by page faults and page table flags
+(\S \ref{sec:sgx_leaks}). If physical attacks are not an issue, the memory
+manager only needs to hide page-level memory access patterns from the system
+code that manages the virtual memory. Our plan of removing AEX implies that
+page faults would be delivered inside the enclave, to our trusted runtime. The
+runtime would use a protocol to ask the system software to bring in some pages
+from disk, and would be responsible for obfuscating the untrusted software's
+actual access patten.
 
 
 \subsection{Preventing Physical Attacks}
@@ -156,9 +160,10 @@ To avoid leaking information via memory access timing, the memory manager
 runs the ORAM protocol periodically, using the \texttt{RDTSC} instruction as
 the clock source. On a read, the memory manager spins in a loop until it can
 run the ORAM protocol. Writes are queued up, and the memory manager only spins
-in a loop if the queue is full. The untrusted software must also periodically
-call into our runtime, so it can run the ORAM protocol at the right time
-even if no memory accesses are pending.
+in a loop if the queue is full. We take advantage of the fact that the
+untrusted software must periodically call into our runtime to have the memory
+manager run the ORAM protocol at the right time even if no memory accesses are
+pending.
 
 We are considering taking advantage of hyper-threading present in Intel CPUs by
 dedicating a logical processor to the ORAM protocol, and another logical

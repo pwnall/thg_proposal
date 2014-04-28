@@ -71,7 +71,7 @@ The threat model accurately represents a public cloud. Attackers can rent
 resources and run malicious software, as well as run experiments to reveal and
 exploit vulnerabilities in the infrastructure software. The programs that run
 over the private data can also have vulnerabilities, which can be exploited by
-attackers. An attacker can also motivate a datacenter maintainance employee to
+attackers. An attacker can also motivate a datacenter maintenance employee to
 attach a physical device to a server, but this attack is significantly harder
 to mount than a purely software attack.
 
@@ -190,7 +190,7 @@ encryption keys \cite{bonneau2006cache} \cite{brumley2005remote}
 In \S \ref{sec:design}, we outline a method for hiding an application's memory
 access patterns by taking advantage of the L2 cache layout (see \S
 \ref{sec:caching}) to control when data is evicted from the cache. We can use
-an oblivious RAM protocol \cite{stefanov2012path} to hide the cache eviction
+an oblivious RAM protocol \cite{stefanov2013path} to hide the cache eviction
 patterns. Unfortunately, our scheme still leaks memory access patterns under
 the currently documented SGX design, due to page faults (\S \ref{sec:paging})
 and asynchronous enclave exits (AEX). \S \ref{sec:design} We explore the

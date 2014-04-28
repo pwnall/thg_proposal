@@ -38,3 +38,32 @@ The components are mostly independent of each other, and can be developed in
 any sequence. Based on similar previous efforts, we estimate that the Verifier,
 Compiler and Memory Manager will each take about a semester (4 months) to be
 developed, and the Loader and Runtime Glue will take another semester.
+
+\begin{figure}[hbtp]
+  \center{\begin{tabular}{| l | l |}
+  \hline
+  LLVM Compiler for software attacks & 4 months \\
+  \hline
+  Verifier for software attacks & 4 months \\
+  \hline
+  LLVM Compiler for physical attacks & 2 months \\
+  \hline
+  Verifier for physical attacks & 2 months \\
+  \hline
+  Memory manager for software attacks & 3 months \\
+  \hline
+  Memory manager for physical attacks & 3 months \\
+  \hline
+  Application container format and loader & 4 months \\
+  \hline
+  OS communication services & 2 months \\
+  \hline
+  \end{tabular}}
+  \caption{
+    The tenative schedule for implementing the proposed system. The estimates
+    include the time needed to understand the code that we plan to build on,
+    the time needed to design and implement the changes, and the time needed
+    for benchmarking the implementation.
+  }
+  \label{fig:cache_partitions}
+\end{figure}
